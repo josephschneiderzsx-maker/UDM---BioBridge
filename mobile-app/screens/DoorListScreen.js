@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import api from '../services/api';
-import * as LocalAuthentication from 'expo-local-authentication';
 
 export default function DoorListScreen({ navigation }) {
   const [doors, setDoors] = useState([]);
