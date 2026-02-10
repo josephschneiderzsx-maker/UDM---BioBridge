@@ -139,11 +139,11 @@ curl http://localhost:8080/entreprise-1/doors `
 ### 4.2 Test POST /doors/{doorId}/open
 
 ```powershell
-$token = "VOTRE_TOKEN"
+$token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZW50ZXJwcmlzZUlkIjoxLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwiaXNBZG1pbiI6InRydWUiLCJleHAiOjE3NzA4MjM3ODB9.ZydA0LLHgnEYWXyxXAz4zdSGFxLMfODneAv0Kflj198"
 
-curl -X POST http://localhost:8080/entreprise-1/doors/1/open `
-  -H "Authorization: Bearer $token" `
-  -H "Content-Type: application/json" `
+curl -X POST http://localhost:8080/entreprise-1/doors/1/open ^
+  -H "Authorization: Bearer $token" ^
+  -H "Content-Type: application/json" ^
   -d '{\"delay\":3000}'
 ```
 
