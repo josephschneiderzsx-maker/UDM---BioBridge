@@ -1,0 +1,174 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+class ApiService {
+  constructor() {
+    this.baseUrl = null;
+    this.token = null;
+    this.tenant = null;
+  }
+
+  async initialize() {
+    this.baseUrl = await AsyncStorage.getItem('serverUrl');
+    this.token = await AsyncStorage.getItem('token');
+    this.tenant = await AsyncStorage.getItem('tenant');
+  }
+
+  async setServerUrl(url) {
+    this.baseUrl = url;
+    await AsyncStorage.setItem('serverUrl', url);
+  }
+
+  async setToken(token, tenant) {
+    this.token = token;
+    this.tenant = tenant;
+    await AsyncStorage.setItem('token', token);
+    await AsyncStorage.setItem('tenant', tenant);
+  }
+
+  async clearAuth() {
+    this.token = null;
+    this.tenant = null;
+    await AsyncStorage.removeItem('token');
+    await AsyncStorage.removeItem('tenant');
+  }
+
+  async login(email, password, tenant) {
+    await this.initialize();
+    if (!this.baseUrl) {
+      throw new Error('Server URL not configured');
+    }
+
+    const url = `${this.baseUrl}/${tenant}/auth/login`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Login failed');
+    }
+
+    const data = await response.json();
+    await this.setToken(data.token, tenant);
+    return data.token;
+  }
+
+  async getDoors() {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) {
+      throw new Error('Not authenticated');
+    }
+
+    const url = `${this.baseUrl}/${this.tenant}/doors`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await this.clearAuth();
+        throw new Error('Session expired');
+      }
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch doors');
+    }
+
+    const data = await response.json();
+    return data.doors || [];
+  }
+
+  async openDoor(doorId, delay = 3000) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) {
+      throw new Error('Not authenticated');
+    }
+
+    const url = `${this.baseUrl}/${this.tenant}/doors/${doorId}/open`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ delay }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await this.clearAuth();
+        throw new Error('Session expired');
+      }
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to open door');
+    }
+
+    const data = await response.json();
+    return data;
+  }
+
+  async closeDoor(doorId) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) {
+      throw new Error('Not authenticated');
+    }
+
+    const url = `${this.baseUrl}/${this.tenant}/doors/${doorId}/close`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await this.clearAuth();
+        throw new Error('Session expired');
+      }
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to close door');
+    }
+
+    const data = await response.json();
+    return data;
+  }
+
+  async getDoorStatus(doorId) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) {
+      throw new Error('Not authenticated');
+    }
+
+    const url = `${this.baseUrl}/${this.tenant}/doors/${doorId}/status`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await this.clearAuth();
+        throw new Error('Session expired');
+      }
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to get door status');
+    }
+
+    const data = await response.json();
+    return data;
+  }
+}
+
+export default new ApiService();
