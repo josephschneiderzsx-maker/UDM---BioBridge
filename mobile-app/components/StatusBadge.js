@@ -1,8 +1,10 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { colors, borderRadius, spacing } from '../constants/theme';
+import { borderRadius, spacing } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function StatusBadge({ status, size = 'medium' }) {
+  const { colors, isDark } = useTheme();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
 
@@ -65,7 +67,14 @@ export default function StatusBadge({ status, size = 'medium' }) {
   const isSmall = size === 'small';
 
   return (
-    <View style={[styles.container, isSmall && styles.containerSmall]}>
+    <View style={[
+      styles.container,
+      isSmall && styles.containerSmall,
+      {
+        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+        borderColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
+      },
+    ]}>
       <View style={styles.dotWrapper}>
         <Animated.View
           style={[
@@ -96,13 +105,11 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
     alignSelf: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
   },
   containerSmall: {
     paddingHorizontal: 10,

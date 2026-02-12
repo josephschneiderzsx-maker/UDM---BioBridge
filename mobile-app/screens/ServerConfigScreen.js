@@ -12,9 +12,11 @@ import { Wifi } from 'lucide-react-native';
 import api from '../services/api';
 import Input from '../components/Input';
 import PrimaryButton from '../components/PrimaryButton';
-import { colors, spacing, borderRadius } from '../constants/theme';
+import { spacing, borderRadius } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function ServerConfigScreen({ navigation }) {
+  const { colors } = useTheme();
   const [serverUrl, setServerUrl] = useState('http://localhost:8080');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -56,7 +58,7 @@ export default function ServerConfigScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.content}
@@ -71,11 +73,11 @@ export default function ServerConfigScreen({ navigation }) {
           ]}
         >
           <View style={styles.header}>
-            <View style={styles.iconContainer}>
+            <View style={[styles.iconContainer, { backgroundColor: colors.primaryDim }]}>
               <Wifi size={28} color={colors.primary} strokeWidth={1.5} />
             </View>
-            <Text style={styles.title}>Connect</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>Connect</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               Enter your URZIS PASS server address
             </Text>
           </View>
@@ -92,7 +94,7 @@ export default function ServerConfigScreen({ navigation }) {
               keyboardType="url"
               error={error}
             />
-            <Text style={styles.hint}>
+            <Text style={[styles.hint, { color: colors.textTertiary }]}>
               Contact your system administrator if you don't know the server address
             </Text>
           </View>
@@ -113,7 +115,6 @@ export default function ServerConfigScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
@@ -130,7 +131,6 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 18,
-    backgroundColor: colors.primaryDim,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
@@ -140,13 +140,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: colors.textPrimary,
     marginBottom: spacing.sm,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
-    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -155,7 +153,6 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontSize: 13,
-    color: colors.textTertiary,
     textAlign: 'center',
     lineHeight: 18,
   },

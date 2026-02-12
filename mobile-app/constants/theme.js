@@ -1,7 +1,7 @@
 // URZIS PASS - Premium Design System
 // Inspired by Apple HIG + Google Material You + URZIS Brand Identity
 
-export const colors = {
+export const darkColors = {
   // Backgrounds - Pure black foundation (Apple dark mode)
   background: '#000000',
   backgroundSecondary: '#0A0A0A',
@@ -44,6 +44,53 @@ export const colors = {
   fillSecondary: 'rgba(120, 120, 128, 0.24)',
   fillTertiary: 'rgba(120, 120, 128, 0.16)',
 };
+
+export const lightColors = {
+  // Backgrounds - iOS light system
+  background: '#F2F2F7',
+  backgroundSecondary: '#EBEBF0',
+  surface: '#FFFFFF',
+  surfaceElevated: '#F8F8FA',
+  surfaceGlass: 'rgba(255, 255, 255, 0.85)',
+
+  // Primary - URZIS Signature Blue (same)
+  primary: '#00AAFF',
+  primaryLight: '#4DC5FF',
+  primaryDark: '#0088CC',
+  primaryDim: 'rgba(0, 170, 255, 0.10)',
+  primaryDimStrong: 'rgba(0, 170, 255, 0.18)',
+
+  // Accent
+  accent: '#5E5CE6',
+  accentDim: 'rgba(94, 92, 230, 0.12)',
+
+  // System Colors
+  success: '#34C759',
+  successDim: 'rgba(52, 199, 89, 0.10)',
+  danger: '#FF3B30',
+  dangerDim: 'rgba(255, 59, 48, 0.10)',
+  warning: '#FFCC00',
+  orange: '#FF9500',
+
+  // Text - Clean hierarchy
+  textPrimary: '#000000',
+  textSecondary: 'rgba(0, 0, 0, 0.55)',
+  textTertiary: 'rgba(0, 0, 0, 0.28)',
+  textInverse: '#FFFFFF',
+
+  // Borders & Separators
+  separator: 'rgba(0, 0, 0, 0.06)',
+  separatorStrong: 'rgba(0, 0, 0, 0.10)',
+  separatorOpaque: '#C6C6C8',
+
+  // Fill
+  fillPrimary: 'rgba(120, 120, 128, 0.20)',
+  fillSecondary: 'rgba(120, 120, 128, 0.16)',
+  fillTertiary: 'rgba(120, 120, 128, 0.12)',
+};
+
+// Default export for backward compat (used in splash screen / static styles)
+export const colors = darkColors;
 
 export const typography = {
   largeTitle: {

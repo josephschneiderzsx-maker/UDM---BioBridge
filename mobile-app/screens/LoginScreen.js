@@ -15,9 +15,11 @@ import { Mail, Lock, Building2, ChevronLeft } from 'lucide-react-native';
 import api from '../services/api';
 import Input from '../components/Input';
 import PrimaryButton from '../components/PrimaryButton';
-import { colors, spacing, borderRadius } from '../constants/theme';
+import { spacing, borderRadius } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function LoginScreen({ navigation }) {
+  const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [tenant, setTenant] = useState('entreprise-1');
@@ -72,7 +74,7 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -83,7 +85,7 @@ export default function LoginScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
         >
           <TouchableOpacity
-            style={styles.backButton}
+            style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
             onPress={() => navigation.replace('ServerConfig')}
           >
             <ChevronLeft size={20} color={colors.textSecondary} strokeWidth={2.5} />
@@ -99,10 +101,10 @@ export default function LoginScreen({ navigation }) {
             ]}
           >
             <View style={styles.header}>
-              <Text style={styles.brandLabel}>URZIS</Text>
-              <Text style={styles.title}>PASS</Text>
-              <View style={styles.divider} />
-              <Text style={styles.description}>
+              <Text style={[styles.brandLabel, { color: colors.primary }]}>URZIS</Text>
+              <Text style={[styles.title, { color: colors.textPrimary }]}>PASS</Text>
+              <View style={[styles.divider, { backgroundColor: colors.primary }]} />
+              <Text style={[styles.description, { color: colors.textSecondary }]}>
                 Sign in to manage your access
               </Text>
             </View>
@@ -150,7 +152,6 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -165,12 +166,10 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.xxl,
     borderWidth: 1,
-    borderColor: colors.separator,
   },
   content: {
     flex: 1,
@@ -182,7 +181,6 @@ const styles = StyleSheet.create({
   brandLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.primary,
     letterSpacing: 4,
     textTransform: 'uppercase',
     marginBottom: 4,
@@ -190,20 +188,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 44,
     fontWeight: '700',
-    color: colors.textPrimary,
     letterSpacing: -1,
     marginBottom: 16,
   },
   divider: {
     width: 32,
     height: 2,
-    backgroundColor: colors.primary,
     borderRadius: 1,
     marginBottom: 16,
   },
   description: {
     fontSize: 16,
-    color: colors.textSecondary,
     lineHeight: 24,
   },
   form: {

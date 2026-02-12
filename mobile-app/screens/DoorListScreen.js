@@ -10,14 +10,16 @@ import {
   TouchableOpacity,
   Animated,
 } from 'react-native';
-import { LogOut, Plus, Shield } from 'lucide-react-native';
+import { LogOut, Plus, Shield, Sun, Moon } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import api from '../services/api';
 import DoorCard from '../components/DoorCard';
-import { colors, spacing, borderRadius } from '../constants/theme';
+import { spacing, borderRadius } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function DoorListScreen({ navigation }) {
+  const { colors, isDark, toggleTheme } = useTheme();
   const [doors, setDoors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -106,6 +108,50 @@ export default function DoorListScreen({ navigation }) {
     navigation.navigate('DoorControl', { door });
   };
 
+  const handleDoorLongPress = (door) => {
+    if (!isAdmin) return;
+    Alert.alert(
+      door.name,
+      'Choose an action',
+      [
+        {
+          text: 'Edit',
+          onPress: () => navigation.navigate('EditDoor', { door }),
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => confirmDeleteDoor(door),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const confirmDeleteDoor = (door) => {
+    Alert.alert(
+      'Delete Door',
+      `Are you sure you want to delete "${door.name}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.deleteDoor(door.id);
+              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              loadDoors();
+              loadQuota();
+            } catch (error) {
+              Alert.alert('Error', error.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleAddDoor = () => {
     navigation.navigate('AddDoor');
   };
@@ -129,13 +175,18 @@ export default function DoorListScreen({ navigation }) {
     );
   };
 
+  const handleToggleTheme = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    toggleTheme();
+  };
+
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <View style={styles.emptyIcon}>
+      <View style={[styles.emptyIcon, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
         <Shield size={28} color={colors.textTertiary} strokeWidth={1.5} />
       </View>
-      <Text style={styles.emptyTitle}>No doors</Text>
-      <Text style={styles.emptyText}>
+      <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No doors</Text>
+      <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
         You don't have access to any doors yet.{'\n'}
         Contact your administrator.
       </Text>
@@ -145,15 +196,15 @@ export default function DoorListScreen({ navigation }) {
   const renderLoader = () => (
     <View style={styles.loaderContainer}>
       <View style={styles.loaderDots}>
-        <View style={[styles.loaderDot, { opacity: 0.3 }]} />
-        <View style={[styles.loaderDot, { opacity: 0.6 }]} />
-        <View style={[styles.loaderDot, { opacity: 1 }]} />
+        <View style={[styles.loaderDot, { opacity: 0.3, backgroundColor: colors.primary }]} />
+        <View style={[styles.loaderDot, { opacity: 0.6, backgroundColor: colors.primary }]} />
+        <View style={[styles.loaderDot, { opacity: 1, backgroundColor: colors.primary }]} />
       </View>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.View
         style={[styles.inner, { opacity: fadeAnim }]}
       >
@@ -166,13 +217,24 @@ export default function DoorListScreen({ navigation }) {
         >
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.brandLabel}>URZIS PASS</Text>
-              <Text style={styles.greeting}>Doors</Text>
+              <Text style={[styles.brandLabel, { color: colors.primary }]}>URZIS PASS</Text>
+              <Text style={[styles.greeting, { color: colors.textPrimary }]}>Doors</Text>
             </View>
             <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={[styles.themeButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
+                onPress={handleToggleTheme}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                {isDark ? (
+                  <Sun size={16} color={colors.textSecondary} strokeWidth={2.5} />
+                ) : (
+                  <Moon size={16} color={colors.textSecondary} strokeWidth={2.5} />
+                )}
+              </TouchableOpacity>
               {isAdmin && (
                 <TouchableOpacity
-                  style={styles.addButton}
+                  style={[styles.addButton, { backgroundColor: colors.primaryDim }]}
                   onPress={handleAddDoor}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
@@ -180,7 +242,7 @@ export default function DoorListScreen({ navigation }) {
                 </TouchableOpacity>
               )}
               <TouchableOpacity
-                style={styles.logoutButton}
+                style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
                 onPress={handleLogout}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
@@ -191,16 +253,16 @@ export default function DoorListScreen({ navigation }) {
 
           {/* Stats row */}
           <View style={styles.statsRow}>
-            <View style={styles.statPill}>
-              <Text style={styles.statValue}>{doors.length}</Text>
-              <Text style={styles.statLabel}>
+            <View style={[styles.statPill, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
+              <Text style={[styles.statValue, { color: colors.textPrimary }]}>{doors.length}</Text>
+              <Text style={[styles.statLabel, { color: colors.textTertiary }]}>
                 {doors.length === 1 ? 'door' : 'doors'}
               </Text>
             </View>
             {quota && (
-              <View style={styles.statPill}>
-                <Text style={styles.statValue}>{quota.used}/{quota.quota}</Text>
-                <Text style={styles.statLabel}>quota</Text>
+              <View style={[styles.statPill, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
+                <Text style={[styles.statValue, { color: colors.textPrimary }]}>{quota.used}/{quota.quota}</Text>
+                <Text style={[styles.statLabel, { color: colors.textTertiary }]}>quota</Text>
               </View>
             )}
           </View>
@@ -216,7 +278,12 @@ export default function DoorListScreen({ navigation }) {
             data={doors}
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item, index }) => (
-              <DoorCard door={item} onPress={handleDoorPress} index={index} />
+              <DoorCard
+                door={item}
+                onPress={handleDoorPress}
+                onLongPress={handleDoorLongPress}
+                index={index}
+              />
             )}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
@@ -238,7 +305,6 @@ export default function DoorListScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   inner: {
     flex: 1,
@@ -257,7 +323,6 @@ const styles = StyleSheet.create({
   brandLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.primary,
     letterSpacing: 2,
     textTransform: 'uppercase',
     marginBottom: 4,
@@ -265,7 +330,6 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 32,
     fontWeight: '700',
-    color: colors.textPrimary,
     letterSpacing: -0.5,
   },
   headerActions: {
@@ -274,11 +338,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 4,
   },
+  themeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
   addButton: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: colors.primaryDim,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -288,11 +359,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.separator,
   },
   statsRow: {
     flexDirection: 'row',
@@ -302,21 +371,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.separator,
   },
   statValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: colors.textPrimary,
   },
   statLabel: {
     fontSize: 13,
-    color: colors.textTertiary,
   },
   listContent: {
     paddingHorizontal: spacing.xl,
@@ -336,7 +401,6 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: colors.primary,
   },
   emptyContainer: {
     flex: 1,
@@ -348,23 +412,19 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 18,
-    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.separator,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.textPrimary,
     marginBottom: spacing.sm,
     letterSpacing: -0.3,
   },
   emptyText: {
     fontSize: 14,
-    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },

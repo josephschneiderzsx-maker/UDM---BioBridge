@@ -8,7 +8,9 @@ import LoginScreen from './screens/LoginScreen';
 import DoorListScreen from './screens/DoorListScreen';
 import DoorControlScreen from './screens/DoorControlScreen';
 import AddDoorScreen from './screens/AddDoorScreen';
+import EditDoorScreen from './screens/EditDoorScreen';
 import { colors } from './constants/theme';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 
 const Stack = createStackNavigator();
 
@@ -159,7 +161,8 @@ const splashStyles = StyleSheet.create({
   },
 });
 
-export default function App() {
+function AppNavigator() {
+  const { colors, isDark } = useTheme();
   const [initialRoute, setInitialRoute] = useState(null);
   const [showSplash, setShowSplash] = useState(true);
 
@@ -190,20 +193,23 @@ export default function App() {
   }
 
   if (!initialRoute) {
-    return <View style={{ flex: 1, backgroundColor: '#000000' }} />;
+    return <View style={{ flex: 1, backgroundColor: colors.background }} />;
   }
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       <NavigationContainer
         theme={{
-          dark: true,
+          dark: isDark,
           colors: {
             primary: colors.primary,
-            background: '#000000',
+            background: colors.background,
             card: colors.surface,
-            text: '#FFFFFF',
+            text: colors.textPrimary,
             border: colors.separator,
             notification: colors.primary,
           },
@@ -213,7 +219,7 @@ export default function App() {
           initialRouteName={initialRoute}
           screenOptions={{
             headerShown: false,
-            cardStyle: { backgroundColor: '#000000' },
+            cardStyle: { backgroundColor: colors.background },
             gestureEnabled: true,
             ...TransitionPresets.SlideFromRightIOS,
           }}
@@ -237,8 +243,24 @@ export default function App() {
               gestureEnabled: true,
             }}
           />
+          <Stack.Screen
+            name="EditDoor"
+            component={EditDoorScreen}
+            options={{
+              ...TransitionPresets.SlideFromRightIOS,
+              gestureEnabled: true,
+            }}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppNavigator />
+    </ThemeProvider>
   );
 }

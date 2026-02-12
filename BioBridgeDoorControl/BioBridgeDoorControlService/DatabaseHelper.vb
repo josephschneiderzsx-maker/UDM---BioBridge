@@ -124,6 +124,53 @@ Public Class DatabaseHelper
         End Using
     End Function
 
+    Public Sub UpdateDoor(doorId As Integer, name As String, terminalIp As String, terminalPort As Integer, defaultDelay As Integer, agentId As Integer)
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand(
+                "UPDATE doors SET name = @name, terminal_ip = @ip, terminal_port = @port, default_delay = @delay, agent_id = @agent WHERE id = @id AND is_active = 1", conn)
+                cmd.Parameters.AddWithValue("@id", doorId)
+                cmd.Parameters.AddWithValue("@name", name)
+                cmd.Parameters.AddWithValue("@ip", terminalIp)
+                cmd.Parameters.AddWithValue("@port", terminalPort)
+                cmd.Parameters.AddWithValue("@delay", defaultDelay)
+                cmd.Parameters.AddWithValue("@agent", agentId)
+                cmd.ExecuteNonQuery()
+            End Using
+        End Using
+    End Sub
+
+    Public Sub DeleteDoor(doorId As Integer)
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand("UPDATE doors SET is_active = 0 WHERE id = @id", conn)
+                cmd.Parameters.AddWithValue("@id", doorId)
+                cmd.ExecuteNonQuery()
+            End Using
+        End Using
+    End Sub
+
+    Public Function GetDoorById(doorId As Integer, enterpriseId As Integer) As DoorInfo
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand(
+                "SELECT id, name, terminal_ip, terminal_port, default_delay, agent_id FROM doors WHERE id = @id AND enterprise_id = @ent AND is_active = 1", conn)
+                cmd.Parameters.AddWithValue("@id", doorId)
+                cmd.Parameters.AddWithValue("@ent", enterpriseId)
+                Using rdr = cmd.ExecuteReader()
+                    If rdr.Read() Then
+                        Dim door As New DoorInfo()
+                        door.Id = rdr.GetInt32(0)
+                        door.Name = rdr.GetString(1)
+                        door.TerminalIP = rdr.GetString(2)
+                        door.TerminalPort = rdr.GetInt32(3)
+                        door.DefaultDelay = rdr.GetInt32(4)
+                        door.AgentId = rdr.GetInt32(5)
+                        Return door
+                    End If
+                End Using
+            End Using
+        End Using
+        Return Nothing
+    End Function
+
     Public Function GetAgentsForEnterprise(enterpriseId As Integer) As List(Of AgentInfo)
         Dim agents As New List(Of AgentInfo)()
         Using conn = GetConnection()

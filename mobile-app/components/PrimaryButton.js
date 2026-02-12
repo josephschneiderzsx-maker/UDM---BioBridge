@@ -7,7 +7,8 @@ import {
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { colors, borderRadius } from '../constants/theme';
+import { borderRadius } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function PrimaryButton({
   title,
@@ -21,6 +22,8 @@ export default function PrimaryButton({
   textStyle,
   fullWidth = true,
 }) {
+  const { colors } = useTheme();
+
   const handlePress = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onPress?.();
@@ -30,17 +33,17 @@ export default function PrimaryButton({
     const baseStyle = [styles.button, size === 'small' && styles.buttonSmall];
     switch (variant) {
       case 'success':
-        return [...baseStyle, styles.successButton];
+        return [...baseStyle, { backgroundColor: colors.success }];
       case 'danger':
-        return [...baseStyle, styles.dangerButton];
+        return [...baseStyle, { backgroundColor: colors.danger }];
       case 'secondary':
-        return [...baseStyle, styles.secondaryButton];
+        return [...baseStyle, { backgroundColor: colors.primaryDim, borderWidth: 1, borderColor: 'rgba(0, 170, 255, 0.2)' }];
       case 'ghost':
-        return [...baseStyle, styles.ghostButton];
+        return [...baseStyle, { backgroundColor: 'transparent' }];
       case 'glass':
-        return [...baseStyle, styles.glassButton];
+        return [...baseStyle, { backgroundColor: colors.fillTertiary, borderWidth: 1, borderColor: colors.separator }];
       default:
-        return [...baseStyle, styles.primaryButton];
+        return [...baseStyle, { backgroundColor: colors.primary }];
     }
   };
 
@@ -100,28 +103,6 @@ const styles = StyleSheet.create({
   buttonSmall: {
     height: 44,
     paddingHorizontal: 16,
-  },
-  primaryButton: {
-    backgroundColor: colors.primary,
-  },
-  secondaryButton: {
-    backgroundColor: colors.primaryDim,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 170, 255, 0.2)',
-  },
-  ghostButton: {
-    backgroundColor: 'transparent',
-  },
-  glassButton: {
-    backgroundColor: colors.fillTertiary,
-    borderWidth: 1,
-    borderColor: colors.separator,
-  },
-  successButton: {
-    backgroundColor: colors.success,
-  },
-  dangerButton: {
-    backgroundColor: colors.danger,
   },
   disabled: {
     opacity: 0.35,

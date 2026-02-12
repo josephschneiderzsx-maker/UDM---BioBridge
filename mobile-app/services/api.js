@@ -294,6 +294,63 @@ class ApiService {
     return data;
   }
 
+  async updateDoor(doorId, doorData) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) {
+      throw new Error('Not authenticated');
+    }
+
+    const url = `${this.baseUrl}/${this.tenant}/doors/${doorId}`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(doorData),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await this.clearAuth();
+        throw new Error('Session expired');
+      }
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update door');
+    }
+
+    const data = await response.json();
+    return data;
+  }
+
+  async deleteDoor(doorId) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) {
+      throw new Error('Not authenticated');
+    }
+
+    const url = `${this.baseUrl}/${this.tenant}/doors/${doorId}`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await this.clearAuth();
+        throw new Error('Session expired');
+      }
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete door');
+    }
+
+    const data = await response.json();
+    return data;
+  }
+
   async getAgents() {
     await this.initialize();
     if (!this.baseUrl || !this.token || !this.tenant) {

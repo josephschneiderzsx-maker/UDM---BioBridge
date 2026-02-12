@@ -8,9 +8,11 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ChevronRight, Shield } from 'lucide-react-native';
-import { colors, borderRadius, spacing } from '../constants/theme';
+import { borderRadius, spacing } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
-export default function DoorCard({ door, onPress, index = 0 }) {
+export default function DoorCard({ door, onPress, onLongPress, index = 0 }) {
+  const { colors } = useTheme();
   const scaleAnim = useRef(new Animated.Value(0.97)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const translateAnim = useRef(new Animated.Value(12)).current;
@@ -45,6 +47,11 @@ export default function DoorCard({ door, onPress, index = 0 }) {
     onPress?.(door);
   };
 
+  const handleLongPress = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onLongPress?.(door);
+  };
+
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
       toValue: 0.97,
@@ -77,26 +84,30 @@ export default function DoorCard({ door, onPress, index = 0 }) {
       ]}
     >
       <TouchableOpacity
-        style={styles.card}
+        style={[styles.card, {
+          backgroundColor: colors.surface,
+          borderColor: colors.separator,
+        }]}
         onPress={handlePress}
+        onLongPress={handleLongPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={1}
       >
-        <View style={styles.iconContainer}>
+        <View style={[styles.iconContainer, { backgroundColor: colors.primaryDim }]}>
           <Shield size={20} color={colors.primary} strokeWidth={2} />
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.doorName} numberOfLines={1}>
+          <Text style={[styles.doorName, { color: colors.textPrimary }]} numberOfLines={1}>
             {door.name}
           </Text>
-          <Text style={styles.doorInfo} numberOfLines={1}>
+          <Text style={[styles.doorInfo, { color: colors.textTertiary }]} numberOfLines={1}>
             {door.terminal_ip}
           </Text>
         </View>
 
-        <View style={styles.trailing}>
+        <View style={[styles.trailing, { backgroundColor: colors.fillTertiary }]}>
           <ChevronRight
             size={16}
             color={colors.textTertiary}
@@ -115,18 +126,15 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     paddingVertical: 18,
     paddingHorizontal: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.separator,
   },
   iconContainer: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: colors.primaryDim,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -136,14 +144,12 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   doorName: {
-    color: colors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: -0.2,
     marginBottom: 3,
   },
   doorInfo: {
-    color: colors.textTertiary,
     fontSize: 13,
     letterSpacing: 0.1,
   },
@@ -153,6 +159,5 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.fillTertiary,
   },
 });

@@ -11,29 +11,29 @@ import {
   TouchableOpacity,
   Animated,
 } from 'react-native';
-import { X, Plus, Server, Lock, Clock } from 'lucide-react-native';
+import { X, Save, Server, Lock, Clock } from 'lucide-react-native';
 import api from '../services/api';
 import Input from '../components/Input';
 import PrimaryButton from '../components/PrimaryButton';
 import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
 
-export default function AddDoorScreen({ navigation }) {
+export default function EditDoorScreen({ route, navigation }) {
   const { colors } = useTheme();
-  const [name, setName] = useState('');
-  const [terminalIp, setTerminalIp] = useState('');
-  const [terminalPort, setTerminalPort] = useState('4370');
-  const [defaultDelay, setDefaultDelay] = useState('3000');
-  const [agentId, setAgentId] = useState('');
+  const { door } = route.params;
+
+  const [name, setName] = useState(door.name || '');
+  const [terminalIp, setTerminalIp] = useState(door.terminal_ip || '');
+  const [terminalPort, setTerminalPort] = useState(String(door.terminal_port || 4370));
+  const [defaultDelay, setDefaultDelay] = useState(String(door.default_delay || 3000));
+  const [agentId, setAgentId] = useState(String(door.agent_id || ''));
   const [loading, setLoading] = useState(false);
-  const [quota, setQuota] = useState(null);
   const [agents, setAgents] = useState([]);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(24)).current;
 
   useEffect(() => {
-    loadQuota();
     loadAgents();
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -50,43 +50,18 @@ export default function AddDoorScreen({ navigation }) {
     ]).start();
   }, []);
 
-  const loadQuota = async () => {
-    try {
-      const quotaData = await api.getQuota();
-      setQuota(quotaData);
-    } catch (error) {
-      console.error('Failed to load quota:', error);
-    }
-  };
-
   const loadAgents = async () => {
     try {
       const agentsList = await api.getAgents();
       setAgents(agentsList);
-      if (agentsList.length > 0) {
-        setAgentId(agentsList[0].id.toString());
-      }
     } catch (error) {
       console.error('Failed to load agents:', error);
-      Alert.alert(
-        'Warning',
-        'Could not load agents list. Please enter the agent ID manually.',
-        [{ text: 'OK' }]
-      );
     }
   };
 
-  const handleCreate = async () => {
+  const handleSave = async () => {
     if (!name.trim() || !terminalIp.trim() || !agentId.trim()) {
       Alert.alert('Missing Information', 'Please fill in all required fields');
-      return;
-    }
-
-    if (quota && quota.remaining <= 0) {
-      Alert.alert(
-        'Quota Exceeded',
-        `You have reached your limit of ${quota.quota} doors. Please contact your administrator to increase your quota.`
-      );
       return;
     }
 
@@ -100,13 +75,11 @@ export default function AddDoorScreen({ navigation }) {
         agent_id: parseInt(agentId),
       };
 
-      await api.createDoor(doorData);
-      Alert.alert('Success', 'Door created successfully', [
+      await api.updateDoor(door.id, doorData);
+      Alert.alert('Success', 'Door updated successfully', [
         {
           text: 'OK',
-          onPress: () => {
-            navigation.goBack();
-          },
+          onPress: () => navigation.goBack(),
         },
       ]);
     } catch (error) {
@@ -140,48 +113,9 @@ export default function AddDoorScreen({ navigation }) {
             >
               <X size={18} color={colors.textSecondary} strokeWidth={2.5} />
             </TouchableOpacity>
-            <Text style={[styles.title, { color: colors.textPrimary }]}>New Door</Text>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>Edit Door</Text>
             <View style={styles.placeholder} />
           </View>
-
-          {/* Quota */}
-          {quota && (
-            <View style={[styles.quotaCard, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
-              <View style={styles.quotaRow}>
-                <Text style={[styles.quotaLabel, { color: colors.textSecondary }]}>Door Quota</Text>
-                <Text
-                  style={[
-                    styles.quotaValue,
-                    { color: colors.primary },
-                    quota.remaining === 0 && { color: colors.danger },
-                  ]}
-                >
-                  {quota.used} / {quota.quota}
-                </Text>
-              </View>
-              <View style={[styles.quotaBar, { backgroundColor: colors.fillTertiary }]}>
-                <View
-                  style={[
-                    styles.quotaFill,
-                    {
-                      width: `${(quota.used / quota.quota) * 100}%`,
-                      backgroundColor:
-                        quota.remaining === 0
-                          ? colors.danger
-                          : quota.remaining <= 2
-                          ? colors.warning
-                          : colors.primary,
-                    },
-                  ]}
-                />
-              </View>
-              {quota.remaining === 0 && (
-                <Text style={[styles.quotaWarning, { color: colors.danger }]}>
-                  Door limit reached
-                </Text>
-              )}
-            </View>
-          )}
 
           <ScrollView
             style={styles.scrollView}
@@ -266,11 +200,10 @@ export default function AddDoorScreen({ navigation }) {
             </View>
 
             <PrimaryButton
-              title="Create Door"
-              onPress={handleCreate}
+              title="Save Changes"
+              onPress={handleSave}
               loading={loading}
-              disabled={quota && quota.remaining === 0}
-              icon={<Plus size={16} color="#FFFFFF" strokeWidth={2.5} />}
+              icon={<Save size={16} color="#FFFFFF" strokeWidth={2.5} />}
             />
           </ScrollView>
         </Animated.View>
@@ -312,43 +245,6 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     width: 36,
-  },
-  quotaCard: {
-    marginHorizontal: spacing.xl,
-    marginBottom: spacing.lg,
-    padding: spacing.lg,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-  },
-  quotaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  quotaLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    letterSpacing: 0.2,
-    textTransform: 'uppercase',
-  },
-  quotaValue: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  quotaBar: {
-    height: 4,
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginBottom: spacing.xs,
-  },
-  quotaFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  quotaWarning: {
-    fontSize: 12,
-    marginTop: spacing.xs,
   },
   scrollView: {
     flex: 1,

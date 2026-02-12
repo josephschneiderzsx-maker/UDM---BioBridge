@@ -6,7 +6,8 @@ import {
   StyleSheet,
   Animated,
 } from 'react-native';
-import { colors, borderRadius, spacing } from '../constants/theme';
+import { borderRadius, spacing } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function Input({
   label,
@@ -20,6 +21,7 @@ export default function Input({
   error,
   style,
 }) {
+  const { colors } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
   const borderAnim = useRef(new Animated.Value(0)).current;
 
@@ -43,7 +45,7 @@ export default function Input({
 
   return (
     <View style={[styles.container, style]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>}
       <Animated.View
         style={[
           styles.inputWrapper,
@@ -55,7 +57,7 @@ export default function Input({
       >
         {icon && <View style={styles.iconWrapper}>{icon}</View>}
         <TextInput
-          style={styles.input}
+          style={[styles.input, { color: colors.textPrimary }]}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -68,7 +70,7 @@ export default function Input({
           selectionColor={colors.primary}
         />
       </Animated.View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>}
     </View>
   );
 }
@@ -78,7 +80,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   label: {
-    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: '500',
     marginBottom: spacing.sm,
@@ -100,12 +101,10 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: colors.textPrimary,
     fontSize: 16,
     letterSpacing: -0.2,
   },
   errorText: {
-    color: colors.danger,
     fontSize: 13,
     marginTop: spacing.xs,
     marginLeft: 2,

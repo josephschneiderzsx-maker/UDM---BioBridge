@@ -632,6 +632,110 @@ Public Class Service1
             Return
         End If
 
+        ' PUT /{tenant}/doors/{id} - Modifier une porte
+        If segments.Length = 3 AndAlso request.HttpMethod = "PUT" Then
+            Dim putIsAdmin As Boolean = PermissionChecker.IsAdminFromClaims(principal)
+            If Not putIsAdmin Then
+                response.StatusCode = 403
+                SendJsonResponse(response, "{""error"":""Only administrators can update doors""}")
+                Return
+            End If
+
+            Dim putDoorId As Integer
+            If Not Integer.TryParse(segments(2), putDoorId) Then
+                response.StatusCode = 400
+                SendJsonResponse(response, "{""error"":""Invalid door id""}")
+                Return
+            End If
+
+            ' Vérifier que la porte existe et appartient à l'entreprise
+            Dim existingDoor = db.GetDoorById(putDoorId, enterpriseId)
+            If existingDoor Is Nothing Then
+                response.StatusCode = 404
+                SendJsonResponse(response, "{""error"":""Door not found""}")
+                Return
+            End If
+
+            Dim body As String = ""
+            If request.HasEntityBody Then
+                Dim inputStream As System.IO.Stream = request.InputStream
+                Dim encoding As System.Text.Encoding = request.ContentEncoding
+                Using reader As New System.IO.StreamReader(inputStream, encoding)
+                    body = reader.ReadToEnd()
+                End Using
+            End If
+
+            Dim putName = ExtractJsonString(body, "name")
+            Dim putTerminalIp = ExtractJsonString(body, "terminal_ip")
+            Dim putAgentIdStr = ExtractJsonNumber(body, "agent_id")
+            Dim putTerminalPortStr = ExtractJsonNumber(body, "terminal_port")
+            Dim putDefaultDelayStr = ExtractJsonNumber(body, "default_delay")
+
+            If String.IsNullOrEmpty(putName) Then putName = existingDoor.Name
+            If String.IsNullOrEmpty(putTerminalIp) Then putTerminalIp = existingDoor.TerminalIP
+
+            Dim putAgentId As Integer = existingDoor.AgentId
+            If Not String.IsNullOrEmpty(putAgentIdStr) Then
+                Integer.TryParse(putAgentIdStr, putAgentId)
+            End If
+
+            Dim putTerminalPort As Integer = existingDoor.TerminalPort
+            If Not String.IsNullOrEmpty(putTerminalPortStr) Then
+                Integer.TryParse(putTerminalPortStr, putTerminalPort)
+            End If
+
+            Dim putDefaultDelay As Integer = existingDoor.DefaultDelay
+            If Not String.IsNullOrEmpty(putDefaultDelayStr) Then
+                Integer.TryParse(putDefaultDelayStr, putDefaultDelay)
+            End If
+
+            Try
+                db.UpdateDoor(putDoorId, putName, putTerminalIp, putTerminalPort, putDefaultDelay, putAgentId)
+                response.StatusCode = 200
+                SendJsonResponse(response, "{""success"":true,""message"":""Door updated successfully""}")
+            Catch ex As Exception
+                CreateLog("Error updating door: " & ex.ToString())
+                response.StatusCode = 500
+                SendJsonResponse(response, "{""error"":""Failed to update door""}")
+            End Try
+            Return
+        End If
+
+        ' DELETE /{tenant}/doors/{id} - Supprimer une porte (soft delete)
+        If segments.Length = 3 AndAlso request.HttpMethod = "DELETE" Then
+            Dim delIsAdmin As Boolean = PermissionChecker.IsAdminFromClaims(principal)
+            If Not delIsAdmin Then
+                response.StatusCode = 403
+                SendJsonResponse(response, "{""error"":""Only administrators can delete doors""}")
+                Return
+            End If
+
+            Dim delDoorId As Integer
+            If Not Integer.TryParse(segments(2), delDoorId) Then
+                response.StatusCode = 400
+                SendJsonResponse(response, "{""error"":""Invalid door id""}")
+                Return
+            End If
+
+            Dim existingDoor = db.GetDoorById(delDoorId, enterpriseId)
+            If existingDoor Is Nothing Then
+                response.StatusCode = 404
+                SendJsonResponse(response, "{""error"":""Door not found""}")
+                Return
+            End If
+
+            Try
+                db.DeleteDoor(delDoorId)
+                response.StatusCode = 200
+                SendJsonResponse(response, "{""success"":true,""message"":""Door deleted successfully""}")
+            Catch ex As Exception
+                CreateLog("Error deleting door: " & ex.ToString())
+                response.StatusCode = 500
+                SendJsonResponse(response, "{""error"":""Failed to delete door""}")
+            End Try
+            Return
+        End If
+
         If segments.Length < 4 Then
             SendNotFound(response)
             Return

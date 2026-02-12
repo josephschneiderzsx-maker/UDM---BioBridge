@@ -11,15 +11,17 @@ import {
 } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Haptics from 'expo-haptics';
-import { X, Activity, ChevronDown, Fingerprint, Lock, Unlock, Shield } from 'lucide-react-native';
+import { X, Activity, ChevronDown, Fingerprint, Lock, Unlock } from 'lucide-react-native';
 import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
-import { colors, spacing, borderRadius } from '../constants/theme';
+import { spacing, borderRadius } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 const BUTTON_SIZE = Math.min(width * 0.45, 180);
 
 export default function DoorControlScreen({ route, navigation }) {
+  const { colors, isDark } = useTheme();
   const { door } = route.params;
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('Secured');
@@ -69,7 +71,6 @@ export default function DoorControlScreen({ route, navigation }) {
   const triggerSuccessAnimation = () => {
     setShowSuccess(true);
 
-    // Double ring effect
     Animated.stagger(120, [
       Animated.sequence([
         Animated.timing(ringAnim, {
@@ -97,7 +98,6 @@ export default function DoorControlScreen({ route, navigation }) {
       ]),
     ]).start();
 
-    // Lock animation
     Animated.sequence([
       Animated.timing(lockRotateAnim, {
         toValue: 1,
@@ -112,7 +112,6 @@ export default function DoorControlScreen({ route, navigation }) {
       }),
     ]).start();
 
-    // Glow pulse
     Animated.sequence([
       Animated.timing(glowAnim, {
         toValue: 1,
@@ -234,7 +233,7 @@ export default function DoorControlScreen({ route, navigation }) {
   });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.View
         style={[
           styles.content,
@@ -246,12 +245,14 @@ export default function DoorControlScreen({ route, navigation }) {
       >
         {/* Drag indicator */}
         <View style={styles.dragIndicator}>
-          <View style={styles.dragHandle} />
+          <View style={[styles.dragHandle, {
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
+          }]} />
         </View>
 
         {/* Close */}
         <TouchableOpacity
-          style={styles.closeButton}
+          style={[styles.closeButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
@@ -260,9 +261,9 @@ export default function DoorControlScreen({ route, navigation }) {
 
         {/* Door Info */}
         <View style={styles.doorInfo}>
-          <Text style={styles.doorLabel}>URZIS PASS</Text>
-          <Text style={styles.doorName}>{door.name}</Text>
-          <Text style={styles.doorAddress}>
+          <Text style={[styles.doorLabel, { color: colors.primary }]}>URZIS PASS</Text>
+          <Text style={[styles.doorName, { color: colors.textPrimary }]}>{door.name}</Text>
+          <Text style={[styles.doorAddress, { color: colors.textTertiary }]}>
             {door.terminal_ip}:{door.terminal_port}
           </Text>
           <View style={styles.statusWrapper}>
@@ -272,7 +273,6 @@ export default function DoorControlScreen({ route, navigation }) {
 
         {/* Main Unlock Button */}
         <View style={styles.buttonArea}>
-          {/* Success rings */}
           {showSuccess && (
             <>
               <Animated.View
@@ -298,7 +298,6 @@ export default function DoorControlScreen({ route, navigation }) {
             </>
           )}
 
-          {/* Glow */}
           <Animated.View
             style={[
               styles.glow,
@@ -320,15 +319,16 @@ export default function DoorControlScreen({ route, navigation }) {
                   ? colors.success
                   : isUnlocked
                   ? colors.success
-                  : 'rgba(255, 255, 255, 0.06)',
+                  : isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
               },
             ]}
           >
             <TouchableOpacity
               style={[
                 styles.mainButton,
-                isUnlocked && styles.mainButtonUnlocked,
-                showSuccess && styles.mainButtonSuccess,
+                { backgroundColor: colors.surface, borderColor: colors.separator },
+                isUnlocked && { backgroundColor: colors.successDim, borderColor: 'rgba(48, 209, 88, 0.15)' },
+                showSuccess && { backgroundColor: colors.successDim, borderColor: 'rgba(48, 209, 88, 0.2)' },
               ]}
               onPress={authenticateAndOpen}
               disabled={loading || isUnlocking}
@@ -342,19 +342,21 @@ export default function DoorControlScreen({ route, navigation }) {
                 {isUnlocked ? (
                   <Unlock size={44} color={colors.success} strokeWidth={2} />
                 ) : (
-                  <Lock size={44} color="#FFFFFF" strokeWidth={2} />
+                  <Lock size={44} color={colors.textPrimary} strokeWidth={2} />
                 )}
               </Animated.View>
 
               {!isUnlocked && (
-                <View style={styles.biometricHint}>
+                <View style={[styles.biometricHint, {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
+                }]}>
                   <Fingerprint size={12} color={colors.textTertiary} strokeWidth={2} />
                 </View>
               )}
             </TouchableOpacity>
           </Animated.View>
 
-          <Text style={styles.buttonLabel}>
+          <Text style={[styles.buttonLabel, { color: colors.textSecondary }]}>
             {isUnlocking
               ? 'Unlocking...'
               : isUnlocked
@@ -364,7 +366,7 @@ export default function DoorControlScreen({ route, navigation }) {
         </View>
 
         {/* Actions */}
-        <View style={styles.actions}>
+        <View style={[styles.actions, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={closeDoor}
@@ -372,10 +374,10 @@ export default function DoorControlScreen({ route, navigation }) {
             activeOpacity={0.7}
           >
             <X size={16} color={colors.textPrimary} strokeWidth={2.5} />
-            <Text style={styles.actionText}>Lock</Text>
+            <Text style={[styles.actionText, { color: colors.textPrimary }]}>Lock</Text>
           </TouchableOpacity>
 
-          <View style={styles.actionDivider} />
+          <View style={[styles.actionDivider, { backgroundColor: colors.separator }]} />
 
           <TouchableOpacity
             style={styles.actionButton}
@@ -384,7 +386,7 @@ export default function DoorControlScreen({ route, navigation }) {
             activeOpacity={0.7}
           >
             <Activity size={16} color={colors.textPrimary} strokeWidth={2.5} />
-            <Text style={styles.actionText}>Status</Text>
+            <Text style={[styles.actionText, { color: colors.textPrimary }]}>Status</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -395,7 +397,6 @@ export default function DoorControlScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
@@ -410,19 +411,16 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
   },
   closeButton: {
     alignSelf: 'center',
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.separator,
   },
   doorInfo: {
     alignItems: 'center',
@@ -431,7 +429,6 @@ const styles = StyleSheet.create({
   doorLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: colors.primary,
     letterSpacing: 3,
     textTransform: 'uppercase',
     marginBottom: 8,
@@ -439,13 +436,11 @@ const styles = StyleSheet.create({
   doorName: {
     fontSize: 24,
     fontWeight: '700',
-    color: colors.textPrimary,
     letterSpacing: -0.3,
     marginBottom: 6,
   },
   doorAddress: {
     fontSize: 13,
-    color: colors.textTertiary,
     letterSpacing: 0.5,
     marginBottom: 14,
   },
@@ -480,19 +475,9 @@ const styles = StyleSheet.create({
   mainButton: {
     flex: 1,
     borderRadius: BUTTON_SIZE / 2,
-    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.separator,
-  },
-  mainButtonUnlocked: {
-    backgroundColor: colors.successDim,
-    borderColor: 'rgba(48, 209, 88, 0.15)',
-  },
-  mainButtonSuccess: {
-    backgroundColor: colors.successDim,
-    borderColor: 'rgba(48, 209, 88, 0.2)',
   },
   biometricHint: {
     position: 'absolute',
@@ -501,7 +486,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -509,18 +493,15 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontSize: 13,
     fontWeight: '500',
-    color: colors.textSecondary,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     marginBottom: spacing.xxl,
     borderWidth: 1,
-    borderColor: colors.separator,
     overflow: 'hidden',
   },
   actionButton: {
@@ -534,12 +515,10 @@ const styles = StyleSheet.create({
   actionDivider: {
     width: 1,
     height: 24,
-    backgroundColor: colors.separator,
   },
   actionText: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.textPrimary,
     letterSpacing: -0.1,
   },
 });
