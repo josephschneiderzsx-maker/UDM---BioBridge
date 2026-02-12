@@ -14,15 +14,41 @@ class ApiService {
   }
 
   async setServerUrl(url) {
-    this.baseUrl = url;
-    await AsyncStorage.setItem('serverUrl', url);
+    if (!url) {
+      this.baseUrl = null;
+      await AsyncStorage.removeItem('serverUrl');
+      return;
+    }
+
+    // Normaliser l'URL : ajouter http:// si manquant
+    let normalizedUrl = url.trim();
+    if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+      normalizedUrl = 'http://' + normalizedUrl;
+    }
+    
+    // Retirer le slash final s'il existe
+    normalizedUrl = normalizedUrl.replace(/\/$/, '');
+    
+    this.baseUrl = normalizedUrl;
+    await AsyncStorage.setItem('serverUrl', normalizedUrl);
   }
 
   async setToken(token, tenant) {
     this.token = token;
     this.tenant = tenant;
-    await AsyncStorage.setItem('token', token);
-    await AsyncStorage.setItem('tenant', tenant);
+    
+    // AsyncStorage ne peut pas stocker null/undefined
+    if (token) {
+      await AsyncStorage.setItem('token', token);
+    } else {
+      await AsyncStorage.removeItem('token');
+    }
+    
+    if (tenant) {
+      await AsyncStorage.setItem('tenant', tenant);
+    } else {
+      await AsyncStorage.removeItem('tenant');
+    }
   }
 
   async clearAuth() {
@@ -39,20 +65,61 @@ class ApiService {
     }
 
     const url = `${this.baseUrl}/${tenant}/auth/login`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Login failed');
+    let response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+    } catch (error) {
+      throw new Error(`Network error: ${error.message}`);
     }
 
-    const data = await response.json();
+    if (!response.ok) {
+      let errorMessage = 'Login failed';
+      let responseText;
+      try {
+        responseText = await response.text();
+        if (responseText) {
+          try {
+            const error = JSON.parse(responseText);
+            errorMessage = error.error || error.message || errorMessage;
+          } catch (e) {
+            // Si ce n'est pas du JSON, utiliser le texte brut
+            errorMessage = responseText.length > 100 ? responseText.substring(0, 100) + '...' : responseText;
+          }
+        } else {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+      } catch (e) {
+        errorMessage = `Server error: ${response.status} ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
+    }
+
+    let data;
+    let responseText;
+    try {
+      responseText = await response.text();
+      if (!responseText) {
+        throw new Error('Empty response from server');
+      }
+      data = JSON.parse(responseText);
+    } catch (error) {
+      // Si le parsing JSON échoue, afficher la réponse brute pour debug
+      console.error('Response text:', responseText);
+      throw new Error(`Invalid response from server: ${error.message}`);
+    }
+    
+    // Vérifier que le token est présent dans la réponse
+    if (!data || !data.token) {
+      console.error('Server response:', data);
+      throw new Error(`No token received from server. Response: ${JSON.stringify(data)}`);
+    }
+    
     await this.setToken(data.token, tenant);
     return data.token;
   }

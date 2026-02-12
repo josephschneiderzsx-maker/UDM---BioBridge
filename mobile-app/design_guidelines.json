@@ -1,0 +1,177 @@
+{
+  "identity": {
+    "persona": "E1",
+    "tone": "Premium Security, Cyber-Physical, Trustworthy, Efficient",
+    "visual_style": "Dark Glass, Tactical Obsidian, Biometric Neon",
+    "design_principles": [
+      "Fusion over Imitation: Mix tactical gear aesthetics with premium fintech UI",
+      "Emotion First: Security = Calm + Confidence. No clutter, just control.",
+      "Content is King: The 'Unlock' action is the hero. Everything else is secondary.",
+      "Zoom In: Big, tactile buttons. You shouldn't miss the button when you're in a rush.",
+      "Negative Space: Dark voids to create focus."
+    ]
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Outfit",
+      "body": "Plus Jakarta Sans",
+      "mono": "JetBrains Mono"
+    },
+    "installation_guide": "Use 'expo-font' to load these Google Fonts. Fallback to System Sans-Serif if loading fails.",
+    "scale": {
+      "h1": { "size": 32, "weight": "700", "tracking": -0.5, "lineHeight": 40 },
+      "h2": { "size": 24, "weight": "600", "tracking": -0.3, "lineHeight": 32 },
+      "h3": { "size": 20, "weight": "600", "tracking": 0, "lineHeight": 28 },
+      "body_lg": { "size": 18, "weight": "400", "lineHeight": 26 },
+      "body": { "size": 16, "weight": "400", "lineHeight": 24 },
+      "caption": { "size": 13, "weight": "500", "lineHeight": 18, "uppercase": true, "tracking": 1.5 }
+    }
+  },
+  "colors": {
+    "palette": {
+      "background": "#050505",
+      "surface": "#121212",
+      "surface_highlight": "#1E1E1E",
+      "primary": "#00F0FF",
+      "primary_dim": "rgba(0, 240, 255, 0.1)",
+      "secondary": "#7000FF",
+      "success": "#00FF94",
+      "success_dim": "rgba(0, 255, 148, 0.1)",
+      "danger": "#FF2A6D",
+      "danger_dim": "rgba(255, 42, 109, 0.1)",
+      "warning": "#FFD600",
+      "text_main": "#EDEDED",
+      "text_muted": "#888888",
+      "border": "#2A2A2A",
+      "border_active": "#444444"
+    },
+    "usage": {
+      "background": "Global app background",
+      "cards": "Surface color with 1px border",
+      "primary_action": "Primary Neon Blue",
+      "status_open": "Success Green",
+      "status_closed": "Text Muted or Danger Red (if locked securely)",
+      "status_error": "Danger Red"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": {
+        "height": 56,
+        "borderRadius": 16,
+        "backgroundColor": "#00F0FF",
+        "text_color": "#000000",
+        "font_weight": "700",
+        "shadow": "0px 0px 15px rgba(0, 240, 255, 0.3)"
+      },
+      "secondary": {
+        "height": 56,
+        "borderRadius": 16,
+        "backgroundColor": "#1E1E1E",
+        "text_color": "#EDEDED",
+        "border": "1px solid #333333"
+      },
+      "ghost": {
+        "backgroundColor": "transparent",
+        "text_color": "#00F0FF"
+      }
+    },
+    "inputs": {
+      "height": 56,
+      "backgroundColor": "#0A0A0A",
+      "borderColor": "#333333",
+      "borderRadius": 12,
+      "color": "#FFFFFF",
+      "placeholderColor": "#555555",
+      "focusBorderColor": "#00F0FF"
+    },
+    "cards": {
+      "backgroundColor": "#121212",
+      "borderRadius": 20,
+      "padding": 20,
+      "borderWidth": 1,
+      "borderColor": "#222222"
+    },
+    "status_indicators": {
+      "dot_size": 8,
+      "pulse_effect": true
+    }
+  },
+  "screens": {
+    "ServerConfigScreen": {
+      "layout": "Center aligned content",
+      "elements": [
+        "Logo or Server Icon (Large)",
+        "Title: 'Connect to BioBridge'",
+        "Input: Server URL (Pre-filled or simple entry)",
+        "Button: 'Connect'"
+      ]
+    },
+    "LoginScreen": {
+      "layout": "Split: Top Header (Brand), Bottom Form",
+      "elements": [
+        "Welcome Title",
+        "Tenant Selector (Dropdown styled as bottom sheet or card)",
+        "Email Input",
+        "Password Input",
+        "Biometric Login Option (FaceID Icon)",
+        "Login Button"
+      ]
+    },
+    "DoorListScreen": {
+      "layout": "List View with Header",
+      "elements": [
+        "Header: User Avatar + Greeting + Connection Status",
+        "Search Bar (Optional)",
+        "Section Title: 'Accessible Doors'",
+        "Door Card: Name, Location, Status (Open/Closed), Last Access Time",
+        "Pull to Refresh"
+      ]
+    },
+    "DoorControlScreen": {
+      "layout": "Hero Controller",
+      "elements": [
+        "Header: Back Button + Door Name",
+        "Central Visual: Large Lock Icon / Door State Visualization",
+        "Status Text: 'SECURED' or 'UNLOCKED'",
+        "Main Action: Big Circular 'OPEN' Button with Fingerprint Icon",
+        "Secondary Actions: 'View Logs' or 'Report Issue'"
+      ]
+    }
+  },
+  "assets": {
+    "icons": {
+      "library": "Lucide React Native (lucide-react-native) or Ionicons (@expo/vector-icons)",
+      "style": "Stroke width 2px, rounded ends"
+    },
+    "images": {
+      "background_texture": "Subtle noise or carbon fiber pattern (optional CSS/SVG)",
+      "logo": "BioBridge Logo (Abstract biometric shape)"
+    }
+  },
+  "interactions": {
+    "haptics": "Trigger Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium) on button press",
+    "transitions": "LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut) for state changes",
+    "feedback": "Show Toast or Snackbar on success/error"
+  },
+  "file_paths": {
+    "screens": "/app/temp_repo/mobile-app/screens",
+    "components": "/app/temp_repo/mobile-app/components"
+  },
+  "instructions_to_main_agent": [
+    "1. Setup 'expo-font' and load 'Outfit' and 'Plus Jakarta Sans'.",
+    "2. Create a 'theme.js' or 'constants/colors.js' to centralize the palette.",
+    "3. Refactor all screens to use the new Dark Mode palette.",
+    "4. Replace native Buttons with custom TouchableOpacity components matching the 'premium' specs.",
+    "5. Add 'lucide-react-native' for icons.",
+    "6. Ensure the Biometric Auth flow feels 'high-tech' - use animations or color shifts.",
+    "7. DO NOT use default React Native 'Button' component. Build a 'PrimaryButton' component.",
+    "8. Use SafeAreaView correctly with a black background."
+  ],
+  "universal_guidelines": [
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Use 2-3x more spacing than feels comfortable.",
+    "Every interaction needs feedback (visual + haptic)."
+  ]
+}

@@ -1,14 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
   Alert,
-  ActivityIndicator,
+  TouchableOpacity,
+  Animated,
+  ScrollView,
 } from 'react-native';
+import { Mail, Lock, Building2, ChevronLeft } from 'lucide-react-native';
 import api from '../services/api';
+import Input from '../components/Input';
+import PrimaryButton from '../components/PrimaryButton';
+import { colors, spacing, borderRadius } from '../constants/theme';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -16,8 +23,24 @@ export default function LoginScreen({ navigation }) {
   const [tenant, setTenant] = useState('entreprise-1');
   const [loading, setLoading] = useState(false);
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(40)).current;
+
   useEffect(() => {
     checkServerUrl();
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 50,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
   const checkServerUrl = async () => {
@@ -33,7 +56,7 @@ export default function LoginScreen({ navigation }) {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim() || !tenant.trim()) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      Alert.alert('Missing Information', 'Please fill in all fields');
       return;
     }
 
@@ -42,99 +65,147 @@ export default function LoginScreen({ navigation }) {
       await api.login(email.trim(), password, tenant.trim());
       navigation.replace('DoorList');
     } catch (error) {
-      Alert.alert('Erreur de connexion', error.message);
+      Alert.alert('Sign In Failed', error.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Connexion</Text>
-
-      <Text style={styles.label}>Entreprise (tenant)</Text>
-      <TextInput
-        style={styles.input}
-        value={tenant}
-        onChangeText={setTenant}
-        placeholder="entreprise-1"
-        autoCapitalize="none"
-      />
-
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-        placeholder="admin@example.com"
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-
-      <Text style={styles.label}>Mot de passe</Text>
-      <TextInput
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-        placeholder="••••••••"
-        secureTextEntry
-      />
-
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleLogin}
-        disabled={loading}
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Se connecter</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.replace('ServerConfig')}
+          >
+            <ChevronLeft size={24} color={colors.textSecondary} strokeWidth={2} />
+          </TouchableOpacity>
+
+          <Animated.View
+            style={[
+              styles.content,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            <View style={styles.header}>
+              <Text style={styles.welcomeText}>Welcome to</Text>
+              <Text style={styles.title}>UDM</Text>
+              <Text style={styles.subtitle}>
+                URZIS DOOR MONITORING
+              </Text>
+              <Text style={styles.description}>
+                Sign in to access your doors
+              </Text>
+            </View>
+
+            <View style={styles.form}>
+              <Input
+                label="Organization"
+                value={tenant}
+                onChangeText={setTenant}
+                placeholder="Enter organization ID"
+                icon={<Building2 size={20} color={colors.textTertiary} strokeWidth={1.5} />}
+              />
+
+              <Input
+                label="Email"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="your@email.com"
+                keyboardType="email-address"
+                icon={<Mail size={20} color={colors.textTertiary} strokeWidth={1.5} />}
+              />
+
+              <Input
+                label="Password"
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Enter your password"
+                secureTextEntry
+                icon={<Lock size={20} color={colors.textTertiary} strokeWidth={1.5} />}
+              />
+            </View>
+
+            <PrimaryButton
+              title="Sign In"
+              onPress={handleLogin}
+              loading={loading}
+            />
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxxl,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xxl,
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  header: {
+    marginBottom: spacing.xxxl,
+  },
+  welcomeText: {
+    fontSize: 17,
+    color: colors.textTertiary,
+    marginBottom: spacing.xs,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 32,
-    textAlign: 'center',
-    color: '#333',
+    fontSize: 42,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    letterSpacing: 2,
+    marginBottom: spacing.xs,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#333',
+  subtitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: spacing.sm,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 16,
+  description: {
+    fontSize: 17,
+    color: colors.textSecondary,
+    lineHeight: 24,
+    marginTop: spacing.sm,
   },
-  button: {
-    backgroundColor: '#2196F3',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+  form: {
+    marginBottom: spacing.xl,
   },
 });
