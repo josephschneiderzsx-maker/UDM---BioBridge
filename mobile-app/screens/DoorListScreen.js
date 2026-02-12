@@ -10,22 +10,27 @@ import {
   TouchableOpacity,
   Animated,
 } from 'react-native';
-import { LogOut, RefreshCw, DoorOpen } from 'lucide-react-native';
+import { LogOut, RefreshCw, DoorOpen, Plus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import api from '../services/api';
 import DoorCard from '../components/DoorCard';
 import { colors, spacing, borderRadius } from '../constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function DoorListScreen({ navigation }) {
   const [doors, setDoors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [quota, setQuota] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerSlideAnim = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
     loadDoors();
+    loadQuota();
+    checkAdminStatus();
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -40,6 +45,28 @@ export default function DoorListScreen({ navigation }) {
       }),
     ]).start();
   }, []);
+
+  const checkAdminStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        // Décoder le token JWT pour vérifier isAdmin
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setIsAdmin(payload.isAdmin === 'true' || payload.isAdmin === true);
+      }
+    } catch (error) {
+      console.error('Failed to check admin status:', error);
+    }
+  };
+
+  const loadQuota = async () => {
+    try {
+      const quotaData = await api.getQuota();
+      setQuota(quotaData);
+    } catch (error) {
+      console.error('Failed to load quota:', error);
+    }
+  };
 
   const loadDoors = async () => {
     try {
@@ -70,6 +97,15 @@ export default function DoorListScreen({ navigation }) {
 
   const handleDoorPress = (door) => {
     navigation.navigate('DoorControl', { door });
+  };
+
+  const handleAddDoor = () => {
+    navigation.navigate('AddDoor', {
+      onDoorCreated: () => {
+        loadDoors();
+        loadQuota();
+      },
+    });
   };
 
   const handleLogout = async () => {
@@ -139,19 +175,37 @@ export default function DoorListScreen({ navigation }) {
           ]}
         >
           <View style={styles.headerContent}>
-            <View>
+            <View style={styles.headerLeft}>
               <Text style={styles.greeting}>Doors</Text>
-              <Text style={styles.subheading}>
-                {doors.length} {doors.length === 1 ? 'door' : 'doors'}
-              </Text>
+              <View style={styles.headerMeta}>
+                <Text style={styles.subheading}>
+                  {doors.length} {doors.length === 1 ? 'door' : 'doors'}
+                </Text>
+                {quota && (
+                  <Text style={styles.quotaText}>
+                    • {quota.used}/{quota.quota} quota
+                  </Text>
+                )}
+              </View>
             </View>
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={handleLogout}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <LogOut size={18} color={colors.textSecondary} strokeWidth={2.5} />
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              {isAdmin && (
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={handleAddDoor}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Plus size={18} color={colors.primary} strokeWidth={2.5} />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.logoutButton}
+                onPress={handleLogout}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <LogOut size={18} color={colors.textSecondary} strokeWidth={2.5} />
+              </TouchableOpacity>
+            </View>
           </View>
         </Animated.View>
 
@@ -201,6 +255,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
+  headerLeft: {
+    flex: 1,
+  },
+  headerMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   greeting: {
     fontSize: 32,
     fontWeight: '600',
@@ -212,6 +274,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textTertiary,
     letterSpacing: 0.2,
+  },
+  quotaText: {
+    fontSize: 14,
+    color: colors.textTertiary,
+    letterSpacing: 0.2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primaryDim,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   logoutButton: {
     width: 40,

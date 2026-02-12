@@ -296,6 +296,12 @@ Public Class Service1
                 Return
             End If
 
+            ' /{tenant}/quota
+            If segments.Length = 2 AndAlso segments(1) = "quota" AndAlso request.HttpMethod = "GET" Then
+                HandleQuotaRequest(context, principal, enterpriseId)
+                Return
+            End If
+
             ' /{tenant}/doors...
             If segments.Length >= 2 AndAlso segments(1) = "doors" Then
                 HandleDoorRoutes(context, principal, enterpriseId, segments)
@@ -412,6 +418,35 @@ Public Class Service1
         SendJsonResponse(response, "{""token"":""" & token & """}")
     End Sub
 
+    Private Sub HandleQuotaRequest(context As HttpListenerContext, principal As ClaimsPrincipal, enterpriseId As Integer)
+        Dim response = context.Response
+        Dim quota As Integer = db.GetEnterpriseQuota(enterpriseId)
+        Dim currentCount As Integer = db.GetActiveDoorCount(enterpriseId)
+        Dim remaining As Integer = Math.Max(0, quota - currentCount)
+        
+        response.StatusCode = 200
+        SendJsonResponse(response, "{""quota"":" & quota & ",""used"":" & currentCount & ",""remaining"":" & remaining & "}")
+    End Sub
+
+    Private Sub HandleAgentsRequest(context As HttpListenerContext, principal As ClaimsPrincipal, enterpriseId As Integer)
+        Dim response = context.Response
+        Dim agents = db.GetAgentsForEnterprise(enterpriseId)
+        
+        Dim agentsJson As New System.Text.StringBuilder()
+        agentsJson.Append("{""agents"":[")
+        Dim first As Boolean = True
+        For Each agent As DatabaseHelper.AgentInfo In agents
+            If Not first Then agentsJson.Append(",")
+            first = False
+            agentsJson.Append("{""id"":").Append(agent.Id).Append(",")
+            agentsJson.Append("""name"":""").Append(agent.Name.Replace("""", "\""")).Append("""}")
+        Next
+        agentsJson.Append("]}")
+        
+        response.StatusCode = 200
+        SendJsonResponse(response, agentsJson.ToString())
+    End Sub
+
     Private Class UserRecord
         Public Property Id As Integer
         Public Property PasswordHash As String
@@ -499,6 +534,95 @@ Public Class Service1
             
             response.StatusCode = 200
             SendJsonResponse(response, doorsJson.ToString())
+            Return
+        End If
+
+        ' POST /{tenant}/doors - Créer une nouvelle porte
+        If segments.Length = 2 AndAlso request.HttpMethod = "POST" Then
+            Dim postUserId As Integer = PermissionChecker.GetUserIdFromClaims(principal)
+            Dim postIsAdmin As Boolean = PermissionChecker.IsAdminFromClaims(principal)
+            
+            ' Seuls les admins peuvent créer des portes
+            If Not postIsAdmin Then
+                response.StatusCode = 403
+                SendJsonResponse(response, "{""error"":""Only administrators can create doors""}")
+                Return
+            End If
+
+            ' Vérifier le quota
+            Dim quota As Integer = db.GetEnterpriseQuota(enterpriseId)
+            Dim currentCount As Integer = db.GetActiveDoorCount(enterpriseId)
+            If currentCount >= quota Then
+                response.StatusCode = 403
+                SendJsonResponse(response, "{""error"":""Door quota exceeded. You have reached your limit of " & quota & " doors.""}")
+                Return
+            End If
+
+            ' Lire le body
+            Dim body As String = ""
+            If request.HasEntityBody Then
+                Dim inputStream As System.IO.Stream = request.InputStream
+                Dim encoding As System.Text.Encoding = request.ContentEncoding
+                Using reader As New System.IO.StreamReader(inputStream, encoding)
+                    body = reader.ReadToEnd()
+                End Using
+            End If
+
+            Dim name = ExtractJsonString(body, "name")
+            Dim terminalIp = ExtractJsonString(body, "terminal_ip")
+            Dim agentIdStr = ExtractJsonNumber(body, "agent_id")
+            Dim terminalPortStr = ExtractJsonNumber(body, "terminal_port")
+            Dim defaultDelayStr = ExtractJsonNumber(body, "default_delay")
+
+            If String.IsNullOrEmpty(name) OrElse String.IsNullOrEmpty(terminalIp) OrElse String.IsNullOrEmpty(agentIdStr) Then
+                response.StatusCode = 400
+                SendJsonResponse(response, "{""error"":""Missing required fields: name, terminal_ip, agent_id""}")
+                Return
+            End If
+
+            Dim agentId As Integer
+            If Not Integer.TryParse(agentIdStr, agentId) Then
+                response.StatusCode = 400
+                SendJsonResponse(response, "{""error"":""Invalid agent_id""}")
+                Return
+            End If
+
+            Dim terminalPort As Integer = 4370
+            If Not String.IsNullOrEmpty(terminalPortStr) Then
+                Integer.TryParse(terminalPortStr, terminalPort)
+            End If
+
+            Dim defaultDelay As Integer = 3000
+            If Not String.IsNullOrEmpty(defaultDelayStr) Then
+                Integer.TryParse(defaultDelayStr, defaultDelay)
+            End If
+
+            ' Vérifier que l'agent appartient à l'entreprise
+            Dim agents = db.GetAgentsForEnterprise(enterpriseId)
+            Dim agentExists As Boolean = False
+            For Each agentItem As DatabaseHelper.AgentInfo In agents
+                If agentItem.Id = agentId Then
+                    agentExists = True
+                    Exit For
+                End If
+            Next
+
+            If Not agentExists Then
+                response.StatusCode = 400
+                SendJsonResponse(response, "{""error"":""Invalid agent_id for this enterprise""}")
+                Return
+            End If
+
+            ' Créer la porte
+            Try
+                Dim newDoorId = db.CreateDoor(enterpriseId, agentId, name, terminalIp, terminalPort, defaultDelay)
+                response.StatusCode = 201
+                SendJsonResponse(response, "{""success"":true,""door_id"":" & newDoorId & ",""message"":""Door created successfully""}")
+            Catch ex As Exception
+                CreateLog("Error creating door: " & ex.ToString())
+                response.StatusCode = 500
+                SendJsonResponse(response, "{""error"":""Failed to create door""}")
+            End Try
             Return
         End If
 

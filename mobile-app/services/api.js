@@ -236,6 +236,91 @@ class ApiService {
     const data = await response.json();
     return data;
   }
+
+  async getQuota() {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) {
+      throw new Error('Not authenticated');
+    }
+
+    const url = `${this.baseUrl}/${this.tenant}/quota`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await this.clearAuth();
+        throw new Error('Session expired');
+      }
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to get quota');
+    }
+
+    const data = await response.json();
+    return data;
+  }
+
+  async createDoor(doorData) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) {
+      throw new Error('Not authenticated');
+    }
+
+    const url = `${this.baseUrl}/${this.tenant}/doors`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(doorData),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await this.clearAuth();
+        throw new Error('Session expired');
+      }
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create door');
+    }
+
+    const data = await response.json();
+    return data;
+  }
+
+  async getAgents() {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) {
+      throw new Error('Not authenticated');
+    }
+
+    const url = `${this.baseUrl}/${this.tenant}/agents`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await this.clearAuth();
+        throw new Error('Session expired');
+      }
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to get agents');
+    }
+
+    const data = await response.json();
+    return data.agents || [];
+  }
 }
 
 export default new ApiService();

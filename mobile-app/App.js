@@ -7,6 +7,7 @@ import ServerConfigScreen from './screens/ServerConfigScreen';
 import LoginScreen from './screens/LoginScreen';
 import DoorListScreen from './screens/DoorListScreen';
 import DoorControlScreen from './screens/DoorControlScreen';
+import AddDoorScreen from './screens/AddDoorScreen';
 import { colors } from './constants/theme';
 
 const Stack = createStackNavigator();
@@ -176,6 +177,14 @@ export default function App() {
             component={DoorControlScreen}
             options={{
               ...TransitionPresets.ModalSlideFromBottomIOS,
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="AddDoor"
+            component={AddDoorScreen}
+            options={{
+              ...TransitionPresets.SlideFromRightIOS,
               gestureEnabled: true,
             }}
           />

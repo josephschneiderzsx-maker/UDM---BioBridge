@@ -87,6 +87,61 @@ Public Class DatabaseHelper
         Return doors
     End Function
 
+    Public Function GetEnterpriseQuota(enterpriseId As Integer) As Integer
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand("SELECT door_quota FROM enterprises WHERE id = @id", conn)
+                cmd.Parameters.AddWithValue("@id", enterpriseId)
+                Dim result = cmd.ExecuteScalar()
+                If result Is Nothing OrElse result Is DBNull.Value Then
+                    Return 10 ' Default
+                End If
+                Return CInt(result)
+            End Using
+        End Using
+    End Function
+
+    Public Function GetActiveDoorCount(enterpriseId As Integer) As Integer
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand("SELECT COUNT(*) FROM doors WHERE enterprise_id = @id AND is_active = 1", conn)
+                cmd.Parameters.AddWithValue("@id", enterpriseId)
+                Return CInt(cmd.ExecuteScalar())
+            End Using
+        End Using
+    End Function
+
+    Public Function CreateDoor(enterpriseId As Integer, agentId As Integer, name As String, terminalIp As String, terminalPort As Integer, defaultDelay As Integer) As Integer
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand("INSERT INTO doors (enterprise_id, agent_id, name, terminal_ip, terminal_port, default_delay) VALUES (@ent, @agent, @name, @ip, @port, @delay)", conn)
+                cmd.Parameters.AddWithValue("@ent", enterpriseId)
+                cmd.Parameters.AddWithValue("@agent", agentId)
+                cmd.Parameters.AddWithValue("@name", name)
+                cmd.Parameters.AddWithValue("@ip", terminalIp)
+                cmd.Parameters.AddWithValue("@port", terminalPort)
+                cmd.Parameters.AddWithValue("@delay", defaultDelay)
+                cmd.ExecuteNonQuery()
+                Return CInt(cmd.LastInsertedId)
+            End Using
+        End Using
+    End Function
+
+    Public Function GetAgentsForEnterprise(enterpriseId As Integer) As List(Of AgentInfo)
+        Dim agents As New List(Of AgentInfo)()
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand("SELECT id, name FROM agents WHERE enterprise_id = @ent AND is_active = 1 ORDER BY name", conn)
+                cmd.Parameters.AddWithValue("@ent", enterpriseId)
+                Using rdr = cmd.ExecuteReader()
+                    While rdr.Read()
+                        Dim agent As New AgentInfo()
+                        agent.Id = rdr.GetInt32(0)
+                        agent.Name = rdr.GetString(1)
+                        agents.Add(agent)
+                    End While
+                End Using
+            End Using
+        End Using
+        Return agents
+    End Function
+
     Public Class DoorInfo
         Public Property Id As Integer
         Public Property Name As String
@@ -94,6 +149,11 @@ Public Class DatabaseHelper
         Public Property TerminalPort As Integer
         Public Property DefaultDelay As Integer
         Public Property AgentId As Integer
+    End Class
+
+    Public Class AgentInfo
+        Public Property Id As Integer
+        Public Property Name As String
     End Class
 
 End Class

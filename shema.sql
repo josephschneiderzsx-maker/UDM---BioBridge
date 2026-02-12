@@ -8,6 +8,7 @@ CREATE TABLE enterprises (
   id INT AUTO_INCREMENT PRIMARY KEY,
   slug VARCHAR(50) NOT NULL UNIQUE,
   name VARCHAR(255) NOT NULL,
+  door_quota INT NOT NULL DEFAULT 10,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   is_active TINYINT(1) NOT NULL DEFAULT 1
 );
@@ -129,8 +130,8 @@ CREATE TABLE door_events (
 );
 
 -- Données de test
-INSERT INTO enterprises (slug, name) VALUES
-('entreprise-1', 'Entreprise 1');
+INSERT INTO enterprises (slug, name, door_quota) VALUES
+('entreprise-1', 'Entreprise 1', 10);
 
 INSERT INTO agents (enterprise_id, name, agent_key, is_online)
 VALUES (1, 'PC Bureau Principal', 'CHANGE_ME_AGENT_KEY_1', 0);
