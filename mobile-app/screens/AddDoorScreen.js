@@ -17,8 +17,7 @@ import Input from '../components/Input';
 import PrimaryButton from '../components/PrimaryButton';
 import { colors, spacing, borderRadius } from '../constants/theme';
 
-export default function AddDoorScreen({ navigation, route }) {
-  const { onDoorCreated } = route.params || {};
+export default function AddDoorScreen({ navigation }) {
   const [name, setName] = useState('');
   const [terminalIp, setTerminalIp] = useState('');
   const [terminalPort, setTerminalPort] = useState('4370');
@@ -55,6 +54,7 @@ export default function AddDoorScreen({ navigation, route }) {
       setQuota(quotaData);
     } catch (error) {
       console.error('Failed to load quota:', error);
+      // Ne pas bloquer l'utilisateur si le quota ne charge pas
     }
   };
 
@@ -67,6 +67,12 @@ export default function AddDoorScreen({ navigation, route }) {
       }
     } catch (error) {
       console.error('Failed to load agents:', error);
+      // Si les agents ne se chargent pas, permettre la saisie manuelle de l'agent_id
+      Alert.alert(
+        'Warning',
+        'Could not load agents list. Please enter the agent ID manually.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -100,9 +106,6 @@ export default function AddDoorScreen({ navigation, route }) {
         {
           text: 'OK',
           onPress: () => {
-            if (onDoorCreated) {
-              onDoorCreated();
-            }
             navigation.goBack();
           },
         },

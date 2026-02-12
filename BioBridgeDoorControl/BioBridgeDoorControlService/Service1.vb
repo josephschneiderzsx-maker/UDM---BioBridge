@@ -302,6 +302,12 @@ Public Class Service1
                 Return
             End If
 
+            ' /{tenant}/agents
+            If segments.Length = 2 AndAlso segments(1) = "agents" AndAlso request.HttpMethod = "GET" Then
+                HandleAgentsRequest(context, principal, enterpriseId)
+                Return
+            End If
+
             ' /{tenant}/doors...
             If segments.Length >= 2 AndAlso segments(1) = "doors" Then
                 HandleDoorRoutes(context, principal, enterpriseId, segments)
@@ -1154,17 +1160,23 @@ Public Class Service1
         Dim startTime As DateTime = DateTime.Now
         Dim commands As List(Of CommandQueueManager.CommandInfo) = Nothing
 
-        ' Long polling: attendre jusqu'à timeout secondes ou jusqu'à avoir des commandes
-        While (DateTime.Now - startTime).TotalSeconds < timeout
-            commands = commandQueue.GetPendingCommands(agentId, 10)
-            If commands.Count > 0 Then
-                Exit While
-            End If
-            Thread.Sleep(500) ' Attendre 500ms avant de réessayer
-        End While
+        ' Vérifier immédiatement s'il y a des commandes
+        commands = commandQueue.GetPendingCommands(agentId, 10)
+        If commands.Count > 0 Then
+            ' Commandes disponibles, retourner immédiatement
+        Else
+            ' Long polling: attendre jusqu'à timeout secondes ou jusqu'à avoir des commandes
+            While (DateTime.Now - startTime).TotalSeconds < timeout
+                commands = commandQueue.GetPendingCommands(agentId, 10)
+                If commands.Count > 0 Then
+                    Exit While
+                End If
+                Thread.Sleep(200) ' Réduire à 200ms pour réponse plus rapide
+            End While
 
-        If commands Is Nothing Then
-            commands = commandQueue.GetPendingCommands(agentId, 10)
+            If commands Is Nothing Then
+                commands = commandQueue.GetPendingCommands(agentId, 10)
+            End If
         End If
 
         Dim json As New System.Text.StringBuilder()

@@ -46,6 +46,15 @@ export default function DoorListScreen({ navigation }) {
     ]).start();
   }, []);
 
+  // Recharger les données quand on revient de AddDoor
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadDoors();
+      loadQuota();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
   const checkAdminStatus = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
@@ -65,6 +74,7 @@ export default function DoorListScreen({ navigation }) {
       setQuota(quotaData);
     } catch (error) {
       console.error('Failed to load quota:', error);
+      // Ne pas bloquer l'utilisateur si le quota ne charge pas
     }
   };
 
@@ -100,13 +110,17 @@ export default function DoorListScreen({ navigation }) {
   };
 
   const handleAddDoor = () => {
-    navigation.navigate('AddDoor', {
-      onDoorCreated: () => {
-        loadDoors();
-        loadQuota();
-      },
-    });
+    navigation.navigate('AddDoor');
   };
+
+  // Recharger les données quand on revient de AddDoor
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadDoors();
+      loadQuota();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   const handleLogout = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

@@ -26,7 +26,7 @@ Public Class ConfigManager
 
         Dim pollStr = ConfigurationManager.AppSettings("PollingInterval")
         If Not Integer.TryParse(pollStr, _pollingInterval) OrElse _pollingInterval <= 0 Then
-            _pollingInterval = 3000
+            _pollingInterval = 500 ' Réduit de 3000ms à 500ms par défaut pour meilleure performance
         End If
 
         Dim hbStr = ConfigurationManager.AppSettings("HeartbeatInterval")
