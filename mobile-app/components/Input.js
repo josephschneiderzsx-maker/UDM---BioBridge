@@ -26,7 +26,7 @@ export default function Input({
   useEffect(() => {
     Animated.timing(borderAnim, {
       toValue: isFocused ? 1 : 0,
-      duration: 200,
+      duration: 250,
       useNativeDriver: false,
     }).start();
   }, [isFocused]);
@@ -36,13 +36,21 @@ export default function Input({
     outputRange: [colors.separator, colors.primary],
   });
 
+  const bgColor = borderAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.surface, 'rgba(0, 170, 255, 0.04)'],
+  });
+
   return (
     <View style={[styles.container, style]}>
       {label && <Text style={styles.label}>{label}</Text>}
       <Animated.View
         style={[
           styles.inputWrapper,
-          { borderColor: error ? colors.danger : borderColor },
+          {
+            borderColor: error ? colors.danger : borderColor,
+            backgroundColor: bgColor,
+          },
         ]}
       >
         {icon && <View style={styles.iconWrapper}>{icon}</View>}
@@ -74,31 +82,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     marginBottom: spacing.sm,
-    marginLeft: 4,
+    marginLeft: 2,
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 52,
-    backgroundColor: colors.surface,
+    height: 54,
     borderWidth: 1,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
   },
   iconWrapper: {
     marginRight: spacing.sm,
-    opacity: 0.6,
+    opacity: 0.5,
   },
   input: {
     flex: 1,
     color: colors.textPrimary,
-    fontSize: 17,
-    letterSpacing: -0.41,
+    fontSize: 16,
+    letterSpacing: -0.2,
   },
   errorText: {
     color: colors.danger,
     fontSize: 13,
     marginTop: spacing.xs,
-    marginLeft: 4,
+    marginLeft: 2,
   },
 });

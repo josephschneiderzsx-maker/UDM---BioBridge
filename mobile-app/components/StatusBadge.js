@@ -4,22 +4,46 @@ import { colors, borderRadius, spacing } from '../constants/theme';
 
 export default function StatusBadge({ status, size = 'medium' }) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
-    Animated.loop(
+    const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.5,
-          duration: 1000,
+          toValue: 1.8,
+          duration: 1200,
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 1000,
+          duration: 1200,
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+
+    const glow = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 0.6,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0.3,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    pulse.start();
+    glow.start();
+
+    return () => {
+      pulse.stop();
+      glow.stop();
+    };
   }, []);
 
   const getStatusColor = () => {
@@ -49,6 +73,7 @@ export default function StatusBadge({ status, size = 'medium' }) {
             {
               backgroundColor: statusColor,
               transform: [{ scale: pulseAnim }],
+              opacity: glowAnim,
             },
           ]}
         />
@@ -71,15 +96,17 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.fillTertiary,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
     alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.04)',
   },
   containerSmall: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   dotWrapper: {
     width: 10,
@@ -93,7 +120,6 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    opacity: 0.3,
   },
   dot: {
     width: 6,
@@ -103,6 +129,8 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 13,
     fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   textSmall: {
     fontSize: 11,

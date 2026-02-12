@@ -1,6 +1,6 @@
-# UDM - URZIS Door Monitoring System
+# URZIS PASS - Smart Access Control System
 
-Système multi-tenant de contrôle de portes BioBridge via application mobile, avec architecture distribuée (serveur central + agents locaux).
+Système multi-tenant de contrôle de portes BioBridge via application mobile **URZIS PASS**, avec architecture distribuée (serveur central + agents locaux).
 
 ## Architecture
 

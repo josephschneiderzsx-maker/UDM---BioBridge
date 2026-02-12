@@ -28,7 +28,7 @@ export default function AddDoorScreen({ navigation }) {
   const [agents, setAgents] = useState([]);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const slideAnim = useRef(new Animated.Value(24)).current;
 
   useEffect(() => {
     loadQuota();
@@ -54,7 +54,6 @@ export default function AddDoorScreen({ navigation }) {
       setQuota(quotaData);
     } catch (error) {
       console.error('Failed to load quota:', error);
-      // Ne pas bloquer l'utilisateur si le quota ne charge pas
     }
   };
 
@@ -67,7 +66,6 @@ export default function AddDoorScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Failed to load agents:', error);
-      // Si les agents ne se chargent pas, permettre la saisie manuelle de l'agent_id
       Alert.alert(
         'Warning',
         'Could not load agents list. Please enter the agent ID manually.',
@@ -82,7 +80,6 @@ export default function AddDoorScreen({ navigation }) {
       return;
     }
 
-    // Vérifier le quota
     if (quota && quota.remaining <= 0) {
       Alert.alert(
         'Quota Exceeded',
@@ -139,21 +136,21 @@ export default function AddDoorScreen({ navigation }) {
               onPress={() => navigation.goBack()}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <X size={24} color={colors.textSecondary} strokeWidth={2} />
+              <X size={18} color={colors.textSecondary} strokeWidth={2.5} />
             </TouchableOpacity>
-            <Text style={styles.title}>Add Door</Text>
+            <Text style={styles.title}>New Door</Text>
             <View style={styles.placeholder} />
           </View>
 
-          {/* Quota Info */}
+          {/* Quota */}
           {quota && (
             <View style={styles.quotaCard}>
-              <View style={styles.quotaHeader}>
+              <View style={styles.quotaRow}>
                 <Text style={styles.quotaLabel}>Door Quota</Text>
                 <Text
                   style={[
-                    styles.quotaStatus,
-                    quota.remaining === 0 && styles.quotaStatusWarning,
+                    styles.quotaValue,
+                    quota.remaining === 0 && styles.quotaDanger,
                   ]}
                 >
                   {quota.used} / {quota.quota}
@@ -162,7 +159,7 @@ export default function AddDoorScreen({ navigation }) {
               <View style={styles.quotaBar}>
                 <View
                   style={[
-                    styles.quotaBarFill,
+                    styles.quotaFill,
                     {
                       width: `${(quota.used / quota.quota) * 100}%`,
                       backgroundColor:
@@ -177,7 +174,7 @@ export default function AddDoorScreen({ navigation }) {
               </View>
               {quota.remaining === 0 && (
                 <Text style={styles.quotaWarning}>
-                  You have reached your door limit
+                  Door limit reached
                 </Text>
               )}
             </View>
@@ -195,22 +192,22 @@ export default function AddDoorScreen({ navigation }) {
                 value={name}
                 onChangeText={setName}
                 placeholder="e.g., Main Entrance"
-                icon={<Lock size={20} color={colors.textTertiary} strokeWidth={1.5} />}
+                icon={<Lock size={18} color={colors.textTertiary} strokeWidth={1.5} />}
               />
 
               <Input
-                label="Terminal IP Address"
+                label="Terminal IP"
                 value={terminalIp}
                 onChangeText={setTerminalIp}
                 placeholder="192.168.1.100"
                 keyboardType="numeric"
-                icon={<Server size={20} color={colors.textTertiary} strokeWidth={1.5} />}
+                icon={<Server size={18} color={colors.textTertiary} strokeWidth={1.5} />}
               />
 
               <View style={styles.row}>
                 <View style={styles.halfWidth}>
                   <Input
-                    label="Terminal Port"
+                    label="Port"
                     value={terminalPort}
                     onChangeText={setTerminalPort}
                     placeholder="4370"
@@ -219,12 +216,12 @@ export default function AddDoorScreen({ navigation }) {
                 </View>
                 <View style={styles.halfWidth}>
                   <Input
-                    label="Default Delay (ms)"
+                    label="Delay (ms)"
                     value={defaultDelay}
                     onChangeText={setDefaultDelay}
                     placeholder="3000"
                     keyboardType="numeric"
-                    icon={<Clock size={20} color={colors.textTertiary} strokeWidth={1.5} />}
+                    icon={<Clock size={18} color={colors.textTertiary} strokeWidth={1.5} />}
                   />
                 </View>
               </View>
@@ -238,21 +235,21 @@ export default function AddDoorScreen({ navigation }) {
               />
 
               {agents.length > 0 && (
-                <View style={styles.agentsList}>
-                  <Text style={styles.agentsLabel}>Available Agents:</Text>
+                <View style={styles.agentsSection}>
+                  <Text style={styles.agentsLabel}>Available Agents</Text>
                   {agents.map((agent) => (
                     <TouchableOpacity
                       key={agent.id}
                       style={[
                         styles.agentItem,
-                        agentId === agent.id.toString() && styles.agentItemSelected,
+                        agentId === agent.id.toString() && styles.agentItemActive,
                       ]}
                       onPress={() => setAgentId(agent.id.toString())}
                     >
                       <Text
                         style={[
                           styles.agentText,
-                          agentId === agent.id.toString() && styles.agentTextSelected,
+                          agentId === agent.id.toString() && styles.agentTextActive,
                         ]}
                       >
                         {agent.name} (ID: {agent.id})
@@ -268,7 +265,7 @@ export default function AddDoorScreen({ navigation }) {
               onPress={handleCreate}
               loading={loading}
               disabled={quota && quota.remaining === 0}
-              icon={<Plus size={18} color="#FFFFFF" strokeWidth={2.5} />}
+              icon={<Plus size={16} color="#FFFFFF" strokeWidth={2.5} />}
             />
           </ScrollView>
         </Animated.View>
@@ -297,9 +294,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
@@ -307,13 +304,13 @@ const styles = StyleSheet.create({
     borderColor: colors.separator,
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
     color: colors.textPrimary,
     letterSpacing: -0.3,
   },
   placeholder: {
-    width: 40,
+    width: 36,
   },
   quotaCard: {
     marginHorizontal: spacing.xl,
@@ -324,35 +321,37 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.separator,
   },
-  quotaHeader: {
+  quotaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.sm,
   },
   quotaLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
     color: colors.textSecondary,
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
   },
-  quotaStatus: {
-    fontSize: 16,
-    fontWeight: '600',
+  quotaValue: {
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.primary,
   },
-  quotaStatusWarning: {
+  quotaDanger: {
     color: colors.danger,
   },
   quotaBar: {
-    height: 6,
-    backgroundColor: colors.fillSecondary,
-    borderRadius: 3,
+    height: 4,
+    backgroundColor: colors.fillTertiary,
+    borderRadius: 2,
     overflow: 'hidden',
     marginBottom: spacing.xs,
   },
-  quotaBarFill: {
+  quotaFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: 2,
   },
   quotaWarning: {
     fontSize: 12,
@@ -376,24 +375,26 @@ const styles = StyleSheet.create({
   halfWidth: {
     flex: 1,
   },
-  agentsList: {
-    marginTop: spacing.md,
+  agentsSection: {
+    marginTop: spacing.sm,
   },
   agentsLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
     color: colors.textSecondary,
     marginBottom: spacing.sm,
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
   },
   agentItem: {
-    padding: spacing.md,
+    padding: 14,
     backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
-    marginBottom: spacing.xs,
+    marginBottom: 6,
     borderWidth: 1,
     borderColor: colors.separator,
   },
-  agentItemSelected: {
+  agentItemActive: {
     borderColor: colors.primary,
     backgroundColor: colors.primaryDim,
   },
@@ -401,7 +402,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textPrimary,
   },
-  agentTextSelected: {
+  agentTextActive: {
     color: colors.primary,
     fontWeight: '600',
   },

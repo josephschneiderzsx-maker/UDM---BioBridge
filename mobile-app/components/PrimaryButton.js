@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { colors, borderRadius, shadows } from '../constants/theme';
+import { colors, borderRadius } from '../constants/theme';
 
 export default function PrimaryButton({
   title,
@@ -66,7 +66,7 @@ export default function PrimaryButton({
       ]}
       onPress={handlePress}
       disabled={disabled || loading}
-      activeOpacity={0.7}
+      activeOpacity={0.8}
     >
       {loading ? (
         <ActivityIndicator color={getTextColor()} size="small" />
@@ -106,12 +106,16 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     backgroundColor: colors.primaryDim,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 170, 255, 0.2)',
   },
   ghostButton: {
     backgroundColor: 'transparent',
   },
   glassButton: {
-    backgroundColor: colors.fillPrimary,
+    backgroundColor: colors.fillTertiary,
+    borderWidth: 1,
+    borderColor: colors.separator,
   },
   successButton: {
     backgroundColor: colors.success,
@@ -120,7 +124,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
   },
   disabled: {
-    opacity: 0.4,
+    opacity: 0.35,
   },
   autoWidth: {
     alignSelf: 'flex-start',
@@ -135,7 +139,7 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 17,
     fontWeight: '600',
-    letterSpacing: -0.41,
+    letterSpacing: -0.2,
   },
   textSmall: {
     fontSize: 15,

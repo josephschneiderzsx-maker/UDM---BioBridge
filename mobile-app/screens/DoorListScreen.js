@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   Animated,
 } from 'react-native';
-import { LogOut, RefreshCw, DoorOpen, Plus } from 'lucide-react-native';
+import { LogOut, Plus, Shield } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import api from '../services/api';
 import DoorCard from '../components/DoorCard';
@@ -25,7 +25,7 @@ export default function DoorListScreen({ navigation }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const headerSlideAnim = useRef(new Animated.Value(20)).current;
+  const headerSlideAnim = useRef(new Animated.Value(16)).current;
 
   useEffect(() => {
     loadDoors();
@@ -46,7 +46,6 @@ export default function DoorListScreen({ navigation }) {
     ]).start();
   }, []);
 
-  // Recharger les données quand on revient de AddDoor
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       loadDoors();
@@ -59,7 +58,6 @@ export default function DoorListScreen({ navigation }) {
     try {
       const token = await AsyncStorage.getItem('token');
       if (token) {
-        // Décoder le token JWT pour vérifier isAdmin
         const payload = JSON.parse(atob(token.split('.')[1]));
         setIsAdmin(payload.isAdmin === 'true' || payload.isAdmin === true);
       }
@@ -74,7 +72,6 @@ export default function DoorListScreen({ navigation }) {
       setQuota(quotaData);
     } catch (error) {
       console.error('Failed to load quota:', error);
-      // Ne pas bloquer l'utilisateur si le quota ne charge pas
     }
   };
 
@@ -113,15 +110,6 @@ export default function DoorListScreen({ navigation }) {
     navigation.navigate('AddDoor');
   };
 
-  // Recharger les données quand on revient de AddDoor
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      loadDoors();
-      loadQuota();
-    });
-    return unsubscribe;
-  }, [navigation]);
-
   const handleLogout = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
@@ -144,63 +132,42 @@ export default function DoorListScreen({ navigation }) {
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <View style={styles.emptyIcon}>
-        <DoorOpen size={32} color={colors.textTertiary} strokeWidth={2} />
+        <Shield size={28} color={colors.textTertiary} strokeWidth={1.5} />
       </View>
-      <Text style={styles.emptyTitle}>No doors available</Text>
+      <Text style={styles.emptyTitle}>No doors</Text>
       <Text style={styles.emptyText}>
         You don't have access to any doors yet.{'\n'}
-        Contact your administrator for access.
+        Contact your administrator.
       </Text>
-      <TouchableOpacity
-        style={styles.refreshButton}
-        onPress={loadDoors}
-        activeOpacity={0.7}
-      >
-        <RefreshCw size={16} color={colors.primary} strokeWidth={2.5} />
-        <Text style={styles.refreshButtonText}>Refresh</Text>
-      </TouchableOpacity>
     </View>
   );
 
   const renderLoader = () => (
     <View style={styles.loaderContainer}>
-      <View style={styles.loaderDot} />
-      <View style={[styles.loaderDot, styles.loaderDotDelay1]} />
-      <View style={[styles.loaderDot, styles.loaderDotDelay2]} />
+      <View style={styles.loaderDots}>
+        <View style={[styles.loaderDot, { opacity: 0.3 }]} />
+        <View style={[styles.loaderDot, { opacity: 0.6 }]} />
+        <View style={[styles.loaderDot, { opacity: 1 }]} />
+      </View>
     </View>
   );
 
   return (
     <SafeAreaView style={styles.container}>
       <Animated.View
-        style={[
-          styles.inner,
-          {
-            opacity: fadeAnim,
-          },
-        ]}
+        style={[styles.inner, { opacity: fadeAnim }]}
       >
+        {/* Header */}
         <Animated.View
           style={[
             styles.header,
-            {
-              transform: [{ translateY: headerSlideAnim }],
-            },
+            { transform: [{ translateY: headerSlideAnim }] },
           ]}
         >
-          <View style={styles.headerContent}>
-            <View style={styles.headerLeft}>
+          <View style={styles.headerTop}>
+            <View>
+              <Text style={styles.brandLabel}>URZIS PASS</Text>
               <Text style={styles.greeting}>Doors</Text>
-              <View style={styles.headerMeta}>
-                <Text style={styles.subheading}>
-                  {doors.length} {doors.length === 1 ? 'door' : 'doors'}
-                </Text>
-                {quota && (
-                  <Text style={styles.quotaText}>
-                    • {quota.used}/{quota.quota} quota
-                  </Text>
-                )}
-              </View>
             </View>
             <View style={styles.headerActions}>
               {isAdmin && (
@@ -209,7 +176,7 @@ export default function DoorListScreen({ navigation }) {
                   onPress={handleAddDoor}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <Plus size={18} color={colors.primary} strokeWidth={2.5} />
+                  <Plus size={16} color={colors.primary} strokeWidth={2.5} />
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -217,12 +184,29 @@ export default function DoorListScreen({ navigation }) {
                 onPress={handleLogout}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <LogOut size={18} color={colors.textSecondary} strokeWidth={2.5} />
+                <LogOut size={16} color={colors.textSecondary} strokeWidth={2.5} />
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* Stats row */}
+          <View style={styles.statsRow}>
+            <View style={styles.statPill}>
+              <Text style={styles.statValue}>{doors.length}</Text>
+              <Text style={styles.statLabel}>
+                {doors.length === 1 ? 'door' : 'doors'}
+              </Text>
+            </View>
+            {quota && (
+              <View style={styles.statPill}>
+                <Text style={styles.statValue}>{quota.used}/{quota.quota}</Text>
+                <Text style={styles.statLabel}>quota</Text>
+              </View>
+            )}
+          </View>
         </Animated.View>
 
+        {/* Content */}
         {loading && doors.length === 0 ? (
           renderLoader()
         ) : doors.length === 0 ? (
@@ -262,87 +246,97 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.md,
   },
-  headerContent: {
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    marginBottom: 16,
   },
-  headerLeft: {
-    flex: 1,
-  },
-  headerMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
+  brandLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.primary,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 4,
   },
   greeting: {
     fontSize: 32,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.textPrimary,
     letterSpacing: -0.5,
-    marginBottom: 2,
-  },
-  subheading: {
-    fontSize: 14,
-    color: colors.textTertiary,
-    letterSpacing: 0.2,
-  },
-  quotaText: {
-    fontSize: 14,
-    color: colors.textTertiary,
-    letterSpacing: 0.2,
   },
   headerActions: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: 8,
     alignItems: 'center',
+    marginTop: 4,
   },
   addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: colors.primaryDim,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: 'rgba(0, 170, 255, 0.15)',
   },
   logoutButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.separator,
   },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.separator,
+  },
+  statValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: colors.textTertiary,
+  },
   listContent: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.md,
     paddingBottom: spacing.xxxl,
   },
   loaderContainer: {
     flex: 1,
-    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 10,
+  },
+  loaderDots: {
+    flexDirection: 'row',
+    gap: 8,
   },
   loaderDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: colors.primary,
-    opacity: 0.3,
-  },
-  loaderDotDelay1: {
-    opacity: 0.6,
-  },
-  loaderDotDelay2: {
-    opacity: 1,
   },
   emptyContainer: {
     flex: 1,
@@ -351,46 +345,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxl,
   },
   emptyIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: borderRadius.lg,
+    width: 64,
+    height: 64,
+    borderRadius: 18,
     backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     borderWidth: 1,
     borderColor: colors.separator,
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: spacing.sm,
     letterSpacing: -0.3,
   },
   emptyText: {
-    fontSize: 15,
+    fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing.xl,
-    letterSpacing: 0.1,
-  },
-  refreshButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.separator,
-  },
-  refreshButtonText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.primary,
-    letterSpacing: -0.2,
+    lineHeight: 20,
   },
 });

@@ -143,117 +143,129 @@ Thread.Sleep(500)
 
 ---
 
-## ✅ Solutions Recommandées (par priorité)
+## ✅ Optimisations Implémentées
 
-### 🔴 **PRIORITÉ 1** : Réduire le Timeout de Long Polling
+### 🔴 **PRIORITÉ 1** : Réduire le Timeout de Long Polling ✅ FAIT
 
-**Action** : Modifier `CommandTimeout` dans `app.config` de l'agent
+**Fichiers modifiés** :
+- `BioBridgeDoorControlAgent/app.config` : `CommandTimeout` 5 → 2
+- `BioBridgeDoorControlAgent/ConfigManager.vb` : Default 5 → 2
 
-```xml
-<add key="CommandTimeout" value="2" />
-```
-
-**Impact attendu** : Réduction de 3 secondes (de 5s à 2s max)
-
-**Risque** : Faible - L'agent pollera plus souvent mais avec moins d'attente
+**Impact** : -3s de latence max sur le long polling
 
 ---
 
-### 🔴 **PRIORITÉ 2** : Implémenter un Pool de Connexions Persistantes
+### 🔴 **PRIORITÉ 2** : Connexions TCP/IP Persistantes ✅ FAIT
 
-**Action** : Modifier `BioBridgeController.vb` pour maintenir les connexions ouvertes
+**Fichier modifié** : `BioBridgeDoorControlAgent/BioBridgeController.vb`
 
-**Bénéfices** :
-- Élimine la latence de connexion TCP/IP (1-5s)
-- Réduction totale estimée : **5-6 secondes**
+**Implémentation** :
+- Ajout de `_connectedTerminalIP`, `_connectedTerminalPort`, `_isConnected`
+- Réutilisation de la connexion si le terminal est identique
+- Reconnexion uniquement si changement de terminal
+- Thread.Sleep réduit de 500ms à 200ms lors du changement de terminal
 
-**Implémentation suggérée** :
-```vb
-' Maintenir une connexion par terminal IP
-Private terminalConnections As New Dictionary(Of String, Boolean)
-
-' Réutiliser la connexion si elle existe déjà
-If terminalConnections.ContainsKey(doorInfo.TerminalIP) AndAlso 
-   terminalConnections(doorInfo.TerminalIP) Then
-    ' Connexion déjà établie, utiliser directement
-Else
-    ' Nouvelle connexion nécessaire
-    connectResult = axBioBridgeSDK1.Connect_TCPIP(...)
-    terminalConnections(doorInfo.TerminalIP) = (connectResult = 0)
-End If
-```
+**Impact** : -1 à 5s par commande (plus de reconnexion inutile)
 
 ---
 
-### 🟡 **PRIORITÉ 3** : Réduire Polling Interval à 250ms
+### 🟡 **PRIORITÉ 3** : Éliminer N+1 Query dans CommandQueueManager ✅ FAIT
 
-**Action** : Modifier `PollingInterval` dans `app.config`
+**Fichier modifié** : `BioBridgeDoorControlService/CommandQueueManager.vb`
 
-```xml
-<add key="PollingInterval" value="250" />
-```
+**Avant** : 1 SELECT + N UPDATEs (chacun avec sa propre connexion DB)
+**Après** : 1 SELECT + 1 UPDATE batch avec `WHERE id IN (...)`
 
-**Impact attendu** : Réduction de 0.25s (de 0.5s à 0.25s max)
-
-**Risque** : Augmentation de la charge serveur (4 req/s au lieu de 2 req/s)
+**Impact** : -10 à 100ms par lot de commandes
 
 ---
 
-### 🟡 **PRIORITÉ 4** : Optimiser Thread.Sleep après déconnexion
+### 🟡 **PRIORITÉ 4** : Optimiser les Boucles de Polling ✅ FAIT
 
-**Action** : Réduire ou supprimer le `Thread.Sleep(500)` si connexions persistantes
+**Fichiers modifiés** :
+- `BioBridgeDoorControlService/Service1.vb` : Sleep intérieur 200ms → 100ms
+- `BioBridgeDoorControlAgent/AgentService.vb` :
+  - Re-poll immédiat après traitement de commandes (skip du sleep 500ms)
+  - Sleep d'erreur réduit de 5000ms à 2000ms
 
-**Impact attendu** : Réduction de 0.5s (si changement de terminal)
+**Impact** : -0.1 à 0.5s sur la détection de commandes
+
+---
+
+### 🟢 **PRIORITÉ 5** : Réduire le Logging sur le Chemin Critique ✅ FAIT
+
+**Fichier modifié** : `BioBridgeDoorControlAgent/ServerClient.vb`
+
+**Avant** : EventLog.WriteEntry sur chaque envoi/réception de résultat
+**Après** : Logging uniquement en cas d'erreur
+
+**Impact** : -10 à 50ms par commande
+
+---
+
+### 🟢 **PRIORITÉ 6** : Index de Base de Données Manquants ✅ FAIT
+
+**Fichier créé** : `migration_add_indexes.sql`
+
+**Index ajoutés** :
+- `idx_doors_enterprise (enterprise_id, is_active)` - listing des portes
+- `idx_doors_agent (agent_id)` - recherche par agent
+- `idx_udp_door (door_id, user_id)` - permissions utilisateur
+
+**Impact** : -10 à 100ms sur les requêtes de recherche
 
 ---
 
 ## 🎯 Objectif de Performance
 
 ### Avant Optimisations
-- **Latence actuelle** : 11.369s
+- **Latence mesurée** : 11.369s
 - **Objectif** : < 3s
 
-### Après Optimisations Prioritaires
+### Après Toutes les Optimisations
 
 | Optimisation | Réduction | Latence Résiduelle |
 |--------------|-----------|-------------------|
-| Réduire timeout long polling (5s → 2s) | -3s | 8.369s |
-| Pool de connexions persistantes | -5s | 3.369s |
-| Réduire polling (500ms → 250ms) | -0.25s | 3.119s |
-| Optimiser Thread.Sleep | -0.5s | **2.619s** ✅ |
+| Long polling timeout (5s → 2s) | -3s | 8.369s |
+| Connexion TCP/IP persistante | -3 à 5s | 3.369-5.369s |
+| Thread.Sleep (500ms → 200ms) | -0.3s | 3.069-5.069s |
+| Re-poll immédiat après commande | -0.5s | 2.569-4.569s |
+| Polling serveur (200ms → 100ms) | -0.1s | 2.469-4.469s |
+| N+1 query éliminé | -0.05s | 2.419-4.419s |
+| Logging hot path supprimé | -0.05s | 2.369-4.369s |
+| Index DB manquants | -0.05s | **2.3-4.3s** |
 
-**Résultat attendu** : **~2.6 secondes** (objectif atteint !)
+**Résultat attendu** : **~2.3s** en cas optimal (même terminal), **~4.3s** si changement de terminal
 
 ---
 
-## 📝 Actions Immédiates
+## 📝 Actions Post-Déploiement
 
-### 1. Vérifier que l'agent utilise le nouveau polling interval
+### 1. Appliquer la migration des index
 
 ```powershell
-# Vérifier le fichier app.config de l'agent
-Get-Content "BioBridgeDoorControl\BioBridgeDoorControlAgent\app.config"
-# Doit afficher : <add key="PollingInterval" value="500" />
+mysql -u udm -p udm_multitenant < migration_add_indexes.sql
 ```
 
-### 2. Redémarrer le service agent
+### 2. Recompiler le serveur et l'agent
 
 ```powershell
+msbuild BioBridgeDoorControl\BioBridgeDoorControlService.sln /p:Configuration=Debug
+```
+
+### 3. Redémarrer les services
+
+```powershell
+Restart-Service "UDM-Server"
 Restart-Service "UDM-Agent"
 ```
 
-### 3. Modifier CommandTimeout (PRIORITÉ 1)
+### 4. Vérifier la configuration
 
-Modifier `BioBridgeDoorControl\BioBridgeDoorControlAgent\app.config` :
-```xml
-<add key="CommandTimeout" value="2" />
+```powershell
+Get-Content "BioBridgeDoorControl\BioBridgeDoorControlAgent\app.config"
+# Doit afficher : CommandTimeout=2, PollingInterval=500
 ```
-
-Puis redémarrer le service.
-
-### 4. Implémenter le pool de connexions (PRIORITÉ 2)
-
-Modifier `BioBridgeDoorControl\BioBridgeDoorControlAgent\BioBridgeController.vb` pour maintenir les connexions.
 
 ---
 

@@ -1171,7 +1171,7 @@ Public Class Service1
                 If commands.Count > 0 Then
                     Exit While
                 End If
-                Thread.Sleep(200) ' Réduire à 200ms pour réponse plus rapide
+                Thread.Sleep(100) ' Réduit à 100ms pour détection plus rapide des commandes
             End While
 
             If commands Is Nothing Then

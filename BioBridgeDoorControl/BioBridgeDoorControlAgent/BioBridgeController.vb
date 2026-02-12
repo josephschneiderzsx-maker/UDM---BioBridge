@@ -9,6 +9,10 @@ Public Class BioBridgeController
     Private Const DEFAULT_TERMINAL_PORT As Integer = 4370
     Private _serverClient As ServerClient
     Private _agentId As Integer
+    ' Cache de connexion persistante : éviter de se reconnecter au même terminal
+    Private _connectedTerminalIP As String = Nothing
+    Private _connectedTerminalPort As Integer = 0
+    Private _isConnected As Boolean = False
 
     Private Class DoorConnection
         Public Property DoorId As Integer
@@ -62,18 +66,34 @@ Public Class BioBridgeController
 
         SyncLock connectionLock
             Try
-                ' Déconnecter si on change de terminal
-                If doorConnections.ContainsKey(doorId) Then
-                    Dim existing = doorConnections(doorId)
-                    If existing.TerminalIP <> doorInfo.TerminalIP Then
+                Dim needReconnect As Boolean = False
+
+                ' Vérifier si on est déjà connecté au bon terminal
+                If _isConnected AndAlso _connectedTerminalIP = doorInfo.TerminalIP AndAlso _connectedTerminalPort = doorInfo.TerminalPort Then
+                    ' Connexion persistante réutilisée - pas besoin de se reconnecter
+                    needReconnect = False
+                Else
+                    ' Déconnecter si on est connecté à un autre terminal
+                    If _isConnected Then
                         axBioBridgeSDK1.Disconnect()
-                        Thread.Sleep(500)
+                        Thread.Sleep(200) ' Réduit de 500ms à 200ms
+                        _isConnected = False
                     End If
+                    needReconnect = True
                 End If
 
-                ' Connecter au terminal
-                Dim connectResult = axBioBridgeSDK1.Connect_TCPIP("", 1, doorInfo.TerminalIP, doorInfo.TerminalPort, 0)
-                If connectResult <> 0 Then Return False
+                If needReconnect Then
+                    ' Nouvelle connexion nécessaire
+                    Dim connectResult = axBioBridgeSDK1.Connect_TCPIP("", 1, doorInfo.TerminalIP, doorInfo.TerminalPort, 0)
+                    If connectResult <> 0 Then
+                        _isConnected = False
+                        _connectedTerminalIP = Nothing
+                        Return False
+                    End If
+                    _isConnected = True
+                    _connectedTerminalIP = doorInfo.TerminalIP
+                    _connectedTerminalPort = doorInfo.TerminalPort
+                End If
 
                 ' Ouvrir la porte
                 Dim result = axBioBridgeSDK1.UnlockDoor(delay)
@@ -85,6 +105,9 @@ Public Class BioBridgeController
                     Return True
                 End If
             Catch ex As Exception
+                ' Connexion probablement perdue, réinitialiser l'état
+                _isConnected = False
+                _connectedTerminalIP = Nothing
                 Return False
             End Try
         End SyncLock
@@ -150,6 +173,8 @@ Public Class BioBridgeController
         If axBioBridgeSDK1 IsNot Nothing Then
             Try
                 axBioBridgeSDK1.Disconnect()
+                _isConnected = False
+                _connectedTerminalIP = Nothing
             Catch
             End Try
         End If

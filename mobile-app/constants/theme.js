@@ -1,39 +1,48 @@
-// URZIS premium theme
+// URZIS PASS - Premium Design System
+// Inspired by Apple HIG + Google Material You + URZIS Brand Identity
+
 export const colors = {
-  // Backgrounds
-  background: '#1A1A2E',
-  backgroundSecondary: '#0F0F1E',
-  surface: '#252538',
-  surfaceElevated: '#2F2F45',
-  surfaceGlass: 'rgba(37, 37, 56, 0.8)',
-  
-  // Primary - URZIS Cyan Blue
+  // Backgrounds - Pure black foundation (Apple dark mode)
+  background: '#000000',
+  backgroundSecondary: '#0A0A0A',
+  surface: '#1C1C1E',
+  surfaceElevated: '#2C2C2E',
+  surfaceGlass: 'rgba(28, 28, 30, 0.85)',
+
+  // Primary - URZIS Signature Blue
   primary: '#00AAFF',
   primaryLight: '#4DC5FF',
-  primaryDim: 'rgba(0, 170, 255, 0.12)',
-  
+  primaryDark: '#0088CC',
+  primaryDim: 'rgba(0, 170, 255, 0.10)',
+  primaryDimStrong: 'rgba(0, 170, 255, 0.18)',
+
+  // Accent - Warm complement
+  accent: '#5E5CE6',
+  accentDim: 'rgba(94, 92, 230, 0.12)',
+
   // System Colors
   success: '#30D158',
-  successDim: 'rgba(48, 209, 88, 0.12)',
-  danger: '#E84118',
-  dangerDim: 'rgba(232, 65, 24, 0.12)',
+  successDim: 'rgba(48, 209, 88, 0.10)',
+  danger: '#FF453A',
+  dangerDim: 'rgba(255, 69, 58, 0.10)',
   warning: '#FFD60A',
   orange: '#FF9F0A',
-  
-  // Text
+
+  // Text - Clean hierarchy
   textPrimary: '#FFFFFF',
-  textSecondary: 'rgba(255, 255, 255, 0.7)',
-  textTertiary: 'rgba(255, 255, 255, 0.4)',
-  textQuaternary: 'rgba(255, 255, 255, 0.2)',
-  
-  // Separators
-  separator: 'rgba(255, 255, 255, 0.08)',
+  textSecondary: 'rgba(255, 255, 255, 0.55)',
+  textTertiary: 'rgba(255, 255, 255, 0.28)',
+  textInverse: '#000000',
+
+  // Borders & Separators
+  separator: 'rgba(255, 255, 255, 0.06)',
+  separatorStrong: 'rgba(255, 255, 255, 0.10)',
   separatorOpaque: '#38383A',
-  
+
   // Fill
   fillPrimary: 'rgba(120, 120, 128, 0.36)',
-  fillSecondary: 'rgba(120, 120, 128, 0.32)',
-  fillTertiary: 'rgba(120, 120, 128, 0.24)',
+  fillSecondary: 'rgba(120, 120, 128, 0.24)',
+  fillTertiary: 'rgba(120, 120, 128, 0.16)',
 };
 
 export const typography = {
@@ -129,28 +138,28 @@ export const shadows = {
   small: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 3,
   },
   medium: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.35,
     shadowRadius: 16,
     elevation: 6,
   },
   large: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.4,
     shadowRadius: 24,
     elevation: 10,
   },
   glow: (color) => ({
     shadowColor: color,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.4,
     shadowRadius: 20,
     elevation: 8,
   }),

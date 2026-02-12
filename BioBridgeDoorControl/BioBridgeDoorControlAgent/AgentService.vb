@@ -115,18 +115,24 @@ Public Class AgentService
         Dim pollingInterval = configManager.GetPollingInterval()
         While isRunning
             Try
+                Dim hadCommands As Boolean = False
                 If agentId > 0 Then
                     Dim commands = serverClient.GetCommands(agentId)
                     If commands IsNot Nothing AndAlso commands.Count > 0 Then
+                        hadCommands = True
                         For Each cmd As ServerClient.CommandInfo In commands
                             ProcessCommand(cmd)
                         Next
                     End If
                 End If
-                Thread.Sleep(pollingInterval)
+                ' Si des commandes ont été traitées, re-poll immédiatement
+                ' pour vérifier s'il y en a d'autres en attente
+                If Not hadCommands Then
+                    Thread.Sleep(pollingInterval)
+                End If
             Catch ex As Exception
                 CreateLog("Error in PollCommandsLoop: " & ex.Message)
-                Thread.Sleep(5000) ' Attendre plus longtemps en cas d'erreur
+                Thread.Sleep(2000) ' Réduit de 5s à 2s en cas d'erreur
             End Try
         End While
     End Sub

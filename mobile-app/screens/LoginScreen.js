@@ -24,14 +24,14 @@ export default function LoginScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(40)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     checkServerUrl();
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 500,
+        duration: 450,
         useNativeDriver: true,
       }),
       Animated.spring(slideAnim, {
@@ -86,7 +86,7 @@ export default function LoginScreen({ navigation }) {
             style={styles.backButton}
             onPress={() => navigation.replace('ServerConfig')}
           >
-            <ChevronLeft size={24} color={colors.textSecondary} strokeWidth={2} />
+            <ChevronLeft size={20} color={colors.textSecondary} strokeWidth={2.5} />
           </TouchableOpacity>
 
           <Animated.View
@@ -99,13 +99,11 @@ export default function LoginScreen({ navigation }) {
             ]}
           >
             <View style={styles.header}>
-              <Text style={styles.welcomeText}>Welcome to</Text>
-              <Text style={styles.title}>UDM</Text>
-              <Text style={styles.subtitle}>
-                URZIS DOOR MONITORING
-              </Text>
+              <Text style={styles.brandLabel}>URZIS</Text>
+              <Text style={styles.title}>PASS</Text>
+              <View style={styles.divider} />
               <Text style={styles.description}>
-                Sign in to access your doors
+                Sign in to manage your access
               </Text>
             </View>
 
@@ -115,7 +113,7 @@ export default function LoginScreen({ navigation }) {
                 value={tenant}
                 onChangeText={setTenant}
                 placeholder="Enter organization ID"
-                icon={<Building2 size={20} color={colors.textTertiary} strokeWidth={1.5} />}
+                icon={<Building2 size={18} color={colors.textTertiary} strokeWidth={1.5} />}
               />
 
               <Input
@@ -124,7 +122,7 @@ export default function LoginScreen({ navigation }) {
                 onChangeText={setEmail}
                 placeholder="your@email.com"
                 keyboardType="email-address"
-                icon={<Mail size={20} color={colors.textTertiary} strokeWidth={1.5} />}
+                icon={<Mail size={18} color={colors.textTertiary} strokeWidth={1.5} />}
               />
 
               <Input
@@ -133,7 +131,7 @@ export default function LoginScreen({ navigation }) {
                 onChangeText={setPassword}
                 placeholder="Enter your password"
                 secureTextEntry
-                icon={<Lock size={20} color={colors.textTertiary} strokeWidth={1.5} />}
+                icon={<Lock size={18} color={colors.textTertiary} strokeWidth={1.5} />}
               />
             </View>
 
@@ -164,46 +162,49 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxl,
   },
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.sm,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.xxl,
+    borderWidth: 1,
+    borderColor: colors.separator,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
   },
   header: {
-    marginBottom: spacing.xxxl,
+    marginBottom: 40,
   },
-  welcomeText: {
-    fontSize: 17,
-    color: colors.textTertiary,
-    marginBottom: spacing.xs,
-  },
-  title: {
-    fontSize: 42,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    letterSpacing: 2,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: 13,
+  brandLabel: {
+    fontSize: 14,
     fontWeight: '600',
     color: colors.primary,
-    letterSpacing: 2,
+    letterSpacing: 4,
     textTransform: 'uppercase',
-    marginBottom: spacing.sm,
+    marginBottom: 4,
+  },
+  title: {
+    fontSize: 44,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    letterSpacing: -1,
+    marginBottom: 16,
+  },
+  divider: {
+    width: 32,
+    height: 2,
+    backgroundColor: colors.primary,
+    borderRadius: 1,
+    marginBottom: 16,
   },
   description: {
-    fontSize: 17,
+    fontSize: 16,
     color: colors.textSecondary,
     lineHeight: 24,
-    marginTop: spacing.sm,
   },
   form: {
     marginBottom: spacing.xl,

@@ -8,7 +8,7 @@ import {
   Platform,
   Animated,
 } from 'react-native';
-import { Server } from 'lucide-react-native';
+import { Wifi } from 'lucide-react-native';
 import api from '../services/api';
 import Input from '../components/Input';
 import PrimaryButton from '../components/PrimaryButton';
@@ -20,18 +20,18 @@ export default function ServerConfigScreen({ navigation }) {
   const [error, setError] = useState('');
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const slideAnim = useRef(new Animated.Value(24)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 600,
+        duration: 500,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 600,
+        duration: 500,
         useNativeDriver: true,
       }),
     ]).start();
@@ -72,11 +72,11 @@ export default function ServerConfigScreen({ navigation }) {
         >
           <View style={styles.header}>
             <View style={styles.iconContainer}>
-              <Server size={32} color={colors.primary} strokeWidth={1.5} />
+              <Wifi size={28} color={colors.primary} strokeWidth={1.5} />
             </View>
-            <Text style={styles.title}>Connect to Server</Text>
+            <Text style={styles.title}>Connect</Text>
             <Text style={styles.subtitle}>
-              Enter your UDM server address to continue
+              Enter your URZIS PASS server address
             </Text>
           </View>
 
@@ -124,29 +124,31 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: spacing.xxxl,
+    marginBottom: 40,
   },
   iconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: borderRadius.lg,
+    width: 64,
+    height: 64,
+    borderRadius: 18,
     backgroundColor: colors.primaryDim,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 170, 255, 0.12)',
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: spacing.sm,
-    letterSpacing: 0.36,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 17,
+    fontSize: 15,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
   },
   form: {
     marginBottom: spacing.xl,
@@ -158,6 +160,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   footer: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
 });

@@ -181,29 +181,17 @@ Public Class ServerClient
     Public Sub SendResult(agentId As Integer, commandId As Integer, success As Boolean, result As String, errorMessage As String)
         Try
             Dim url = _config.ServerUrl.TrimEnd("/"c) & "/agents/" & agentId & "/results"
-            
+
             ' Échapper le result JSON pour qu'il soit une chaîne valide
             Dim escapedResult = result.Replace("""", "\""").Replace(vbCrLf, "\n").Replace(vbLf, "\n")
-            
+
             Dim json = "{""command_id"":" & commandId & ",""success"":" & If(success, "true", "false") & ",""result"":""" & escapedResult & """"
             If Not String.IsNullOrEmpty(errorMessage) Then
                 json &= ",""error_message"":""" & errorMessage.Replace("""", "\""") & """"
             End If
             json &= "}"
-            
-            ' Log pour debug
-            Try
-                EventLog.WriteEntry("UDM-Agent", "SendResult - Sending: " & json, EventLogEntryType.Information)
-            Catch
-            End Try
-            
-            Dim response = SendPostRequest(url, json)
-            
-            ' Log la réponse
-            Try
-                EventLog.WriteEntry("UDM-Agent", "SendResult - Response: " & If(String.IsNullOrEmpty(response), "(empty)", response), EventLogEntryType.Information)
-            Catch
-            End Try
+
+            SendPostRequest(url, json)
         Catch ex As Exception
             Try
                 EventLog.WriteEntry("UDM-Agent", "SendResult - Exception: " & ex.ToString(), EventLogEntryType.Error)
@@ -216,7 +204,7 @@ Public Class ServerClient
         Dim request = CType(WebRequest.Create(url), HttpWebRequest)
         request.Method = "GET"
         request.Headers.Add("X-Agent-Key", _config.AgentKey)
-        request.Timeout = (_config.GetCommandTimeout() + 2) * 1000
+        request.Timeout = (_config.GetCommandTimeout() + 3) * 1000 ' timeout + marge de 3s
 
         Using response = request.GetResponse()
             Dim responseStream As System.IO.Stream = response.GetResponseStream()

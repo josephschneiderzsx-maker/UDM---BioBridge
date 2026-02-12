@@ -56,24 +56,18 @@ Public Class CommandQueueManager
                     End While
                 End Using
             End Using
-            
-            ' Marquer comme "processing"
-            For Each cmdInfo As CommandInfo In commands
-                MarkAsProcessing(cmdInfo.Id)
-            Next
+
+            ' Marquer tous comme "processing" en une seule requête (élimine N+1)
+            If commands.Count > 0 Then
+                Dim ids = String.Join(",", commands.ConvertAll(Function(c) c.Id.ToString()).ToArray())
+                Dim updateSql = "UPDATE command_queue SET status = 'processing', processed_at = NOW() WHERE id IN (" & ids & ")"
+                Using updateCmd = New MySqlCommand(updateSql, conn)
+                    updateCmd.ExecuteNonQuery()
+                End Using
+            End If
         End Using
         Return commands
     End Function
-
-    Private Sub MarkAsProcessing(commandId As Integer)
-        Using conn = _db.GetConnection()
-            Dim sql = "UPDATE command_queue SET status = 'processing', processed_at = NOW() WHERE id = @id"
-            Using cmd = New MySqlCommand(sql, conn)
-                cmd.Parameters.AddWithValue("@id", commandId)
-                cmd.ExecuteNonQuery()
-            End Using
-        End Using
-    End Sub
 
     Public Sub MarkAsCompleted(commandId As Integer, result As String)
         Using conn = _db.GetConnection()

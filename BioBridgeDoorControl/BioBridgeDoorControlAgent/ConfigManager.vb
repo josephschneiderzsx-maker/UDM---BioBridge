@@ -36,7 +36,7 @@ Public Class ConfigManager
 
         Dim timeoutStr = ConfigurationManager.AppSettings("CommandTimeout")
         If Not Integer.TryParse(timeoutStr, _commandTimeout) OrElse _commandTimeout <= 0 Then
-            _commandTimeout = 5
+            _commandTimeout = 2 ' Réduit de 5s à 2s pour réduire la latence long polling
         End If
     End Sub
 

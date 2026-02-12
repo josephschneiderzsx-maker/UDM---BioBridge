@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
-import { StatusBar, View, Animated, StyleSheet } from 'react-native';
+import { StatusBar, View, Animated, StyleSheet, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ServerConfigScreen from './screens/ServerConfigScreen';
 import LoginScreen from './screens/LoginScreen';
@@ -12,56 +12,90 @@ import { colors } from './constants/theme';
 
 const Stack = createStackNavigator();
 
-// Premium splash screen
 function SplashScreen({ onFinish }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const scaleAnim = useRef(new Animated.Value(0.85)).current;
+  const lineWidth = useRef(new Animated.Value(0)).current;
+  const subtitleFade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Logo entrance
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 600,
+        duration: 500,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
-        tension: 50,
+        tension: 40,
         friction: 7,
         useNativeDriver: true,
       }),
     ]).start();
 
+    // Line accent animation
+    setTimeout(() => {
+      Animated.timing(lineWidth, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: false,
+      }).start();
+    }, 300);
+
+    // Subtitle fade
+    setTimeout(() => {
+      Animated.timing(subtitleFade, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+    }, 500);
+
+    // Exit
     const timer = setTimeout(() => {
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 300,
+        duration: 250,
         useNativeDriver: true,
       }).start(() => onFinish());
-    }, 1500);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, []);
+
+  const animatedWidth = lineWidth.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 40],
+  });
 
   return (
     <View style={splashStyles.container}>
       <Animated.View
         style={[
-          splashStyles.logoContainer,
+          splashStyles.content,
           {
             opacity: fadeAnim,
             transform: [{ scale: scaleAnim }],
           },
         ]}
       >
-        <View style={splashStyles.logo}>
-          <View style={splashStyles.logoInner} />
+        <View style={splashStyles.logoMark}>
+          <View style={splashStyles.logoShield}>
+            <View style={splashStyles.logoShieldInner} />
+          </View>
         </View>
-        <Animated.Text style={[splashStyles.title, { opacity: fadeAnim }]}>
-          UDM
-        </Animated.Text>
-        <Animated.Text style={[splashStyles.subtitle, { opacity: fadeAnim }]}>
-          URZIS DOOR MONITORING
+
+        <Text style={splashStyles.brand}>URZIS</Text>
+
+        <Animated.View
+          style={[splashStyles.accentLine, { width: animatedWidth }]}
+        />
+
+        <Animated.Text
+          style={[splashStyles.product, { opacity: subtitleFade }]}
+        >
+          PASS
         </Animated.Text>
       </Animated.View>
     </View>
@@ -71,42 +105,57 @@ function SplashScreen({ onFinish }) {
 const splashStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoContainer: {
+  content: {
     alignItems: 'center',
   },
-  logo: {
-    width: 80,
-    height: 80,
+  logoMark: {
+    width: 72,
+    height: 72,
     borderRadius: 20,
-    backgroundColor: colors.primaryDim,
+    backgroundColor: 'rgba(0, 170, 255, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 170, 255, 0.15)',
   },
-  logoInner: {
-    width: 32,
-    height: 42,
-    borderRadius: 8,
-    borderWidth: 3,
+  logoShield: {
+    width: 30,
+    height: 36,
+    borderRadius: 6,
+    borderWidth: 2.5,
     borderColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  title: {
-    fontSize: 32,
+  logoShieldInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
+  brand: {
+    fontSize: 28,
     fontWeight: '700',
-    color: colors.textPrimary,
-    letterSpacing: 1,
+    color: '#FFFFFF',
+    letterSpacing: 8,
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 13,
+  accentLine: {
+    height: 2,
+    backgroundColor: colors.primary,
+    borderRadius: 1,
+    marginBottom: 8,
+  },
+  product: {
+    fontSize: 15,
     fontWeight: '500',
-    color: colors.textTertiary,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
+    color: colors.textSecondary,
+    letterSpacing: 6,
   },
 });
 
@@ -141,20 +190,20 @@ export default function App() {
   }
 
   if (!initialRoute) {
-    return <View style={{ flex: 1, backgroundColor: colors.background }} />;
+    return <View style={{ flex: 1, backgroundColor: '#000000' }} />;
   }
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
       <NavigationContainer
         theme={{
           dark: true,
           colors: {
             primary: colors.primary,
-            background: colors.background,
+            background: '#000000',
             card: colors.surface,
-            text: colors.textPrimary,
+            text: '#FFFFFF',
             border: colors.separator,
             notification: colors.primary,
           },
@@ -164,7 +213,7 @@ export default function App() {
           initialRouteName={initialRoute}
           screenOptions={{
             headerShown: false,
-            cardStyle: { backgroundColor: colors.background },
+            cardStyle: { backgroundColor: '#000000' },
             gestureEnabled: true,
             ...TransitionPresets.SlideFromRightIOS,
           }}

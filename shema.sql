@@ -43,7 +43,9 @@ CREATE TABLE doors (
       ON DELETE CASCADE,
   CONSTRAINT fk_doors_agent
     FOREIGN KEY (agent_id) REFERENCES agents(id)
-      ON DELETE CASCADE
+      ON DELETE CASCADE,
+  INDEX idx_doors_enterprise (enterprise_id, is_active),
+  INDEX idx_doors_agent (agent_id)
 );
 
 CREATE TABLE users (
@@ -77,7 +79,8 @@ CREATE TABLE user_door_permissions (
   CONSTRAINT fk_udp_door
     FOREIGN KEY (door_id) REFERENCES doors(id)
       ON DELETE CASCADE,
-  CONSTRAINT user_door_unique UNIQUE (user_id, door_id)
+  CONSTRAINT user_door_unique UNIQUE (user_id, door_id),
+  INDEX idx_udp_door (door_id, user_id)
 );
 
 CREATE TABLE command_queue (

@@ -7,35 +7,34 @@ import {
   Animated,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { ChevronRight, Lock } from 'lucide-react-native';
+import { ChevronRight, Shield } from 'lucide-react-native';
 import { colors, borderRadius, spacing } from '../constants/theme';
 
 export default function DoorCard({ door, onPress, index = 0 }) {
-  const scaleAnim = useRef(new Animated.Value(0.96)).current;
+  const scaleAnim = useRef(new Animated.Value(0.97)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
-  const iconScaleAnim = useRef(new Animated.Value(0.8)).current;
+  const translateAnim = useRef(new Animated.Value(12)).current;
 
   useEffect(() => {
-    const delay = index * 60;
+    const delay = index * 70;
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,
-        tension: 65,
-        friction: 8,
+        tension: 80,
+        friction: 10,
         delay,
         useNativeDriver: true,
       }),
       Animated.timing(opacityAnim, {
         toValue: 1,
-        duration: 280,
+        duration: 350,
         delay,
         useNativeDriver: true,
       }),
-      Animated.spring(iconScaleAnim, {
-        toValue: 1,
-        tension: 80,
-        friction: 7,
-        delay: delay + 50,
+      Animated.timing(translateAnim, {
+        toValue: 0,
+        duration: 350,
+        delay,
         useNativeDriver: true,
       }),
     ]).start();
@@ -47,37 +46,21 @@ export default function DoorCard({ door, onPress, index = 0 }) {
   };
 
   const handlePressIn = () => {
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 0.98,
-        tension: 120,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-      Animated.spring(iconScaleAnim, {
-        toValue: 0.95,
-        tension: 120,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.spring(scaleAnim, {
+      toValue: 0.97,
+      tension: 150,
+      friction: 10,
+      useNativeDriver: true,
+    }).start();
   };
 
   const handlePressOut = () => {
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 120,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-      Animated.spring(iconScaleAnim, {
-        toValue: 1,
-        tension: 120,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      tension: 150,
+      friction: 10,
+      useNativeDriver: true,
+    }).start();
   };
 
   return (
@@ -85,7 +68,10 @@ export default function DoorCard({ door, onPress, index = 0 }) {
       style={[
         styles.cardWrapper,
         {
-          transform: [{ scale: scaleAnim }],
+          transform: [
+            { scale: scaleAnim },
+            { translateY: translateAnim },
+          ],
           opacity: opacityAnim,
         },
       ]}
@@ -97,34 +83,24 @@ export default function DoorCard({ door, onPress, index = 0 }) {
         onPressOut={handlePressOut}
         activeOpacity={1}
       >
-        <Animated.View
-          style={[
-            styles.iconContainer,
-            {
-              transform: [{ scale: iconScaleAnim }],
-            },
-          ]}
-        >
-          <Lock size={20} color={colors.primary} strokeWidth={2.5} />
-        </Animated.View>
+        <View style={styles.iconContainer}>
+          <Shield size={20} color={colors.primary} strokeWidth={2} />
+        </View>
 
         <View style={styles.content}>
           <Text style={styles.doorName} numberOfLines={1}>
             {door.name}
           </Text>
-          <View style={styles.metaRow}>
-            <View style={styles.metaDot} />
-            <Text style={styles.doorInfo} numberOfLines={1}>
-              {door.terminal_ip}:{door.terminal_port}
-            </Text>
-          </View>
+          <Text style={styles.doorInfo} numberOfLines={1}>
+            {door.terminal_ip}
+          </Text>
         </View>
 
-        <View style={styles.trailingContainer}>
+        <View style={styles.trailing}>
           <ChevronRight
-            size={18}
+            size={16}
             color={colors.textTertiary}
-            strokeWidth={2}
+            strokeWidth={2.5}
           />
         </View>
       </TouchableOpacity>
@@ -134,25 +110,26 @@ export default function DoorCard({ door, onPress, index = 0 }) {
 
 const styles = StyleSheet.create({
   cardWrapper: {
-    marginBottom: spacing.md,
+    marginBottom: 10,
   },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
-    padding: spacing.lg,
+    paddingVertical: 18,
+    paddingHorizontal: spacing.lg,
     borderWidth: 1,
     borderColor: colors.separator,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.md,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: colors.primaryDim,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.md,
+    marginRight: 14,
   },
   content: {
     flex: 1,
@@ -163,26 +140,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: -0.2,
-    marginBottom: spacing.xs,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  metaDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: colors.textTertiary,
-    marginRight: spacing.xs,
+    marginBottom: 3,
   },
   doorInfo: {
     color: colors.textTertiary,
     fontSize: 13,
     letterSpacing: 0.1,
   },
-  trailingContainer: {
+  trailing: {
     justifyContent: 'center',
     alignItems: 'center',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.fillTertiary,
   },
 });
