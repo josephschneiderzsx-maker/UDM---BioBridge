@@ -9,6 +9,8 @@ import {
   RefreshControl,
   TouchableOpacity,
   Animated,
+  Dimensions,
+  Platform,
 } from 'react-native';
 import { LogOut, Plus, Shield, Sun, Moon } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -17,6 +19,9 @@ import DoorCard from '../components/DoorCard';
 import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const HEADER_TOP_PADDING = Math.max(spacing.xl, SCREEN_HEIGHT * 0.02) + (Platform.OS === 'android' ? 10 : 0);
 
 export default function DoorListScreen({ navigation }) {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -311,7 +316,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
+    paddingTop: HEADER_TOP_PADDING,
     paddingBottom: spacing.md,
   },
   headerTop: {

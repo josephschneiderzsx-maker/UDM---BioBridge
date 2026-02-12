@@ -8,6 +8,7 @@ import {
   Animated,
   TouchableOpacity,
   Dimensions,
+  PanResponder,
 } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Haptics from 'expo-haptics';
@@ -17,8 +18,9 @@ import StatusBadge from '../components/StatusBadge';
 import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
 
-const { width } = Dimensions.get('window');
+const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BUTTON_SIZE = Math.min(width * 0.45, 180);
+const DISMISS_THRESHOLD = 120;
 
 export default function DoorControlScreen({ route, navigation }) {
   const { colors, isDark } = useTheme();
@@ -35,6 +37,36 @@ export default function DoorControlScreen({ route, navigation }) {
   const ring2Anim = useRef(new Animated.Value(0)).current;
   const lockRotateAnim = useRef(new Animated.Value(0)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) =>
+        gestureState.dy > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx * 1.5),
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          translateY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > DISMISS_THRESHOLD || gestureState.vy > 0.5) {
+          Animated.timing(translateY, {
+            toValue: SCREEN_HEIGHT,
+            duration: 250,
+            useNativeDriver: true,
+          }).start(() => navigation.goBack());
+        } else {
+          Animated.spring(translateY, {
+            toValue: 0,
+            tension: 80,
+            friction: 10,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -235,11 +267,12 @@ export default function DoorControlScreen({ route, navigation }) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.View
+        {...panResponder.panHandlers}
         style={[
           styles.content,
           {
             opacity: opacityAnim,
-            transform: [{ scale: scaleAnim }],
+            transform: [{ scale: scaleAnim }, { translateY }],
           },
         ]}
       >
