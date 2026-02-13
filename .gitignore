@@ -31,3 +31,9 @@ npm-debug.log
 .DS_Store
 Thumbs.db
 nul
+
+# Livrables UDM : on versionne SERVER et AGENT sur GitHub
+!UDM/SERVER/
+!UDM/SERVER/**
+!UDM/AGENT/
+!UDM/AGENT/**
