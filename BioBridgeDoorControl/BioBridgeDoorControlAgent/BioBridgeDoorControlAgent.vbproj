@@ -83,12 +83,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="BioBridgeSDKDLLv3">
-      <HintPath>..\BioBridgeDoorControlService\bin\Debug\BioBridgeSDKDLLv3.dll</HintPath>
+      <HintPath>..\BioBridgeDoorControlService\bin\$(Configuration)\BioBridgeSDKDLLv3.dll</HintPath>
       <Private>True</Private>
       <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
     <Reference Include="Interop.zkemkeeper">
-      <HintPath>..\BioBridgeDoorControlService\bin\Debug\Interop.zkemkeeper.dll</HintPath>
+      <HintPath>..\BioBridgeDoorControlService\bin\$(Configuration)\Interop.zkemkeeper.dll</HintPath>
       <Private>True</Private>
       <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
