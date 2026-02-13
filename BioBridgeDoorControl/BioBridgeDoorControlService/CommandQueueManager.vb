@@ -91,6 +91,38 @@ Public Class CommandQueueManager
         End Using
     End Sub
 
+    Public Function GetCommandById(commandId As Integer) As CommandResultInfo
+        Using conn = _db.GetConnection()
+            Dim sql = "SELECT id, door_id, user_id, command_type, status, result, error_message " &
+                      "FROM command_queue WHERE id = @id"
+            Using cmd = New MySqlCommand(sql, conn)
+                cmd.Parameters.AddWithValue("@id", commandId)
+                Using rdr = cmd.ExecuteReader()
+                    If Not rdr.Read() Then Return Nothing
+                    Dim info As New CommandResultInfo()
+                    info.Id = rdr.GetInt32(0)
+                    info.DoorId = rdr.GetInt32(1)
+                    If Not rdr.IsDBNull(2) Then info.UserId = rdr.GetInt32(2)
+                    info.CommandType = rdr.GetString(3)
+                    info.Status = rdr.GetString(4)
+                    If Not rdr.IsDBNull(5) Then info.Result = rdr.GetString(5)
+                    If Not rdr.IsDBNull(6) Then info.ErrorMessage = rdr.GetString(6)
+                    Return info
+                End Using
+            End Using
+        End Using
+    End Function
+
+    Public Class CommandResultInfo
+        Public Property Id As Integer
+        Public Property DoorId As Integer
+        Public Property UserId As Integer?
+        Public Property CommandType As String
+        Public Property Status As String
+        Public Property Result As String
+        Public Property ErrorMessage As String
+    End Class
+
     Public Class CommandInfo
         Public Property Id As Integer
         Public Property DoorId As Integer

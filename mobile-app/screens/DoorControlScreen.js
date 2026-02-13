@@ -3,16 +3,16 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Alert,
   Animated,
   TouchableOpacity,
   Dimensions,
   PanResponder,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Haptics from 'expo-haptics';
-import { X, Activity, ChevronDown, Fingerprint, Lock, Unlock } from 'lucide-react-native';
+import { X, Activity, ChevronDown, Fingerprint, Lock, Unlock, Clock } from 'lucide-react-native';
 import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import { spacing, borderRadius } from '../constants/theme';
@@ -231,9 +231,50 @@ export default function DoorControlScreen({ route, navigation }) {
   const getStatus = async () => {
     setLoading(true);
     try {
-      const result = await api.getDoorStatus(door.id);
-      setStatus(result.status || 'Unknown');
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // Queue the status command and get command_id
+      const queueResult = await api.getDoorStatus(door.id);
+      const commandId = queueResult.command_id;
+      if (!commandId) {
+        setStatus('Unknown');
+        return;
+      }
+
+      // Poll for result every 500ms, max 10s
+      const maxWait = 10000;
+      const interval = 500;
+      let elapsed = 0;
+
+      while (elapsed < maxWait) {
+        await new Promise(resolve => setTimeout(resolve, interval));
+        elapsed += interval;
+
+        try {
+          const cmdResult = await api.getCommandResult(commandId);
+          if (cmdResult.status === 'completed') {
+            // Parse the result string to extract status
+            let doorStatus = 'Unknown';
+            if (cmdResult.result) {
+              try {
+                const parsed = JSON.parse(cmdResult.result);
+                doorStatus = parsed.status || 'Unknown';
+              } catch {
+                doorStatus = cmdResult.result;
+              }
+            }
+            setStatus(doorStatus === 'connected' ? 'Secured' : doorStatus.charAt(0).toUpperCase() + doorStatus.slice(1));
+            return;
+          } else if (cmdResult.status === 'failed') {
+            Alert.alert('Error', cmdResult.error_message || 'Status check failed');
+            return;
+          }
+          // Still pending/processing, keep polling
+        } catch {
+          // Polling error, continue
+        }
+      }
+
+      // Timeout
+      setStatus('Timeout');
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {
@@ -421,6 +462,18 @@ export default function DoorControlScreen({ route, navigation }) {
             <Activity size={16} color={colors.textPrimary} strokeWidth={2.5} />
             <Text style={[styles.actionText, { color: colors.textPrimary }]}>Status</Text>
           </TouchableOpacity>
+
+          <View style={[styles.actionDivider, { backgroundColor: colors.separator }]} />
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('ActivityLog', { doorId: door.id, doorName: door.name })}
+            disabled={loading}
+            activeOpacity={0.7}
+          >
+            <Clock size={16} color={colors.textPrimary} strokeWidth={2.5} />
+            <Text style={[styles.actionText, { color: colors.textPrimary }]}>History</Text>
+          </TouchableOpacity>
         </View>
       </Animated.View>
     </SafeAreaView>
@@ -457,7 +510,7 @@ const styles = StyleSheet.create({
   },
   doorInfo: {
     alignItems: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.lg,
   },
   doorLabel: {
     fontSize: 10,
@@ -484,6 +537,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingBottom: spacing.xxl,
   },
   ring: {
     position: 'absolute',

@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Animated,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { ChevronRight, Shield } from 'lucide-react-native';
 import { borderRadius, spacing } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
@@ -42,13 +41,11 @@ export default function DoorCard({ door, onPress, onLongPress, index = 0 }) {
     ]).start();
   }, []);
 
-  const handlePress = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const handlePress = () => {
     onPress?.(door);
   };
 
-  const handleLongPress = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const handleLongPress = () => {
     onLongPress?.(door);
   };
 

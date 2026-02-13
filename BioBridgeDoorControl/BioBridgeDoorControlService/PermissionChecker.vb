@@ -53,6 +53,12 @@ Public Class PermissionChecker
         Dim claim = principal.FindFirst("isAdmin")
         Return claim IsNot Nothing AndAlso claim.Value = "true"
     End Function
+
+    Public Shared Function GetEmailFromClaims(principal As ClaimsPrincipal) As String
+        Dim claim = principal.FindFirst("email")
+        If claim IsNot Nothing Then Return claim.Value
+        Return Nothing
+    End Function
 End Class
 
 

@@ -351,6 +351,228 @@ class ApiService {
     return data;
   }
 
+  async getCommandResult(commandId) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) {
+      throw new Error('Not authenticated');
+    }
+
+    const url = `${this.baseUrl}/${this.tenant}/commands/${commandId}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await this.clearAuth();
+        throw new Error('Session expired');
+      }
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to get command result');
+    }
+
+    return await response.json();
+  }
+
+  // ===== User Profile =====
+  async getProfile() {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
+    const url = `${this.baseUrl}/${this.tenant}/users/me`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) {
+      if (response.status === 401) { await this.clearAuth(); throw new Error('Session expired'); }
+      const error = await response.json(); throw new Error(error.error || 'Failed to get profile');
+    }
+    return await response.json();
+  }
+
+  async updateProfile(firstName, lastName) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
+    const url = `${this.baseUrl}/${this.tenant}/users/me`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ first_name: firstName, last_name: lastName }),
+    });
+    if (!response.ok) {
+      if (response.status === 401) { await this.clearAuth(); throw new Error('Session expired'); }
+      const error = await response.json(); throw new Error(error.error || 'Failed to update profile');
+    }
+    return await response.json();
+  }
+
+  async changePassword(currentPassword, newPassword) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
+    const url = `${this.baseUrl}/${this.tenant}/users/me/password`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    });
+    if (!response.ok) {
+      if (response.status === 401) { await this.clearAuth(); throw new Error('Session expired'); }
+      const error = await response.json(); throw new Error(error.error || 'Failed to change password');
+    }
+    return await response.json();
+  }
+
+  // ===== User Management (Admin) =====
+  async getUsers() {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
+    const url = `${this.baseUrl}/${this.tenant}/users`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) {
+      if (response.status === 401) { await this.clearAuth(); throw new Error('Session expired'); }
+      const error = await response.json(); throw new Error(error.error || 'Failed to get users');
+    }
+    const data = await response.json();
+    return data.users || [];
+  }
+
+  async createUser(userData) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
+    const url = `${this.baseUrl}/${this.tenant}/users`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData),
+    });
+    if (!response.ok) {
+      if (response.status === 401) { await this.clearAuth(); throw new Error('Session expired'); }
+      const error = await response.json(); throw new Error(error.error || 'Failed to create user');
+    }
+    return await response.json();
+  }
+
+  async updateUser(userId, userData) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
+    const url = `${this.baseUrl}/${this.tenant}/users/${userId}`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData),
+    });
+    if (!response.ok) {
+      if (response.status === 401) { await this.clearAuth(); throw new Error('Session expired'); }
+      const error = await response.json(); throw new Error(error.error || 'Failed to update user');
+    }
+    return await response.json();
+  }
+
+  async deleteUser(userId) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
+    const url = `${this.baseUrl}/${this.tenant}/users/${userId}`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) {
+      if (response.status === 401) { await this.clearAuth(); throw new Error('Session expired'); }
+      const error = await response.json(); throw new Error(error.error || 'Failed to delete user');
+    }
+    return await response.json();
+  }
+
+  async getUserPermissions(userId) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
+    const url = `${this.baseUrl}/${this.tenant}/users/${userId}/permissions`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) {
+      if (response.status === 401) { await this.clearAuth(); throw new Error('Session expired'); }
+      const error = await response.json(); throw new Error(error.error || 'Failed to get permissions');
+    }
+    const data = await response.json();
+    return data.permissions || [];
+  }
+
+  async setUserPermissions(userId, permissions) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
+    const url = `${this.baseUrl}/${this.tenant}/users/${userId}/permissions`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ permissions }),
+    });
+    if (!response.ok) {
+      if (response.status === 401) { await this.clearAuth(); throw new Error('Session expired'); }
+      const error = await response.json(); throw new Error(error.error || 'Failed to set permissions');
+    }
+    return await response.json();
+  }
+
+  // ===== Events =====
+  async getEvents(doorId = null, limit = 50) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
+    let url = `${this.baseUrl}/${this.tenant}/events?limit=${limit}`;
+    if (doorId) url += `&door_id=${doorId}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) {
+      if (response.status === 401) { await this.clearAuth(); throw new Error('Session expired'); }
+      const error = await response.json(); throw new Error(error.error || 'Failed to get events');
+    }
+    const data = await response.json();
+    return data.events || [];
+  }
+
+  // ===== Notifications =====
+  async getNotificationPreferences() {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
+    const url = `${this.baseUrl}/${this.tenant}/notifications`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) {
+      if (response.status === 401) { await this.clearAuth(); throw new Error('Session expired'); }
+      const error = await response.json(); throw new Error(error.error || 'Failed to get notification preferences');
+    }
+    const data = await response.json();
+    return data.preferences || [];
+  }
+
+  async setNotificationPreference(doorId, notifyOnOpen, notifyOnClose, notifyOnForced) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
+    const url = `${this.baseUrl}/${this.tenant}/notifications`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ door_id: doorId, notify_on_open: notifyOnOpen, notify_on_close: notifyOnClose, notify_on_forced: notifyOnForced }),
+    });
+    if (!response.ok) {
+      if (response.status === 401) { await this.clearAuth(); throw new Error('Session expired'); }
+      const error = await response.json(); throw new Error(error.error || 'Failed to update notification preferences');
+    }
+    return await response.json();
+  }
+
   async getAgents() {
     await this.initialize();
     if (!this.baseUrl || !this.token || !this.tenant) {

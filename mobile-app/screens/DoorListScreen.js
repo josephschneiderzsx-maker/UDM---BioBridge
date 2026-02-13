@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   StyleSheet,
-  SafeAreaView,
   Alert,
   RefreshControl,
   TouchableOpacity,
@@ -12,7 +11,8 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
-import { LogOut, Plus, Shield, Sun, Moon } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { User, Plus, Shield, Sun, Moon, Clock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import api from '../services/api';
 import DoorCard from '../components/DoorCard';
@@ -161,27 +161,15 @@ export default function DoorListScreen({ navigation }) {
     navigation.navigate('AddDoor');
   };
 
-  const handleLogout = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            await api.clearAuth();
-            navigation.replace('Login');
-          },
-        },
-      ]
-    );
+  const handleAccount = () => {
+    navigation.navigate('Account');
   };
 
-  const handleToggleTheme = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const handleActivityLog = () => {
+    navigation.navigate('ActivityLog');
+  };
+
+  const handleToggleTheme = () => {
     toggleTheme();
   };
 
@@ -246,12 +234,21 @@ export default function DoorListScreen({ navigation }) {
                   <Plus size={16} color={colors.primary} strokeWidth={2.5} />
                 </TouchableOpacity>
               )}
+              {isAdmin && (
+                <TouchableOpacity
+                  style={[styles.themeButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
+                  onPress={handleActivityLog}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Clock size={16} color={colors.textSecondary} strokeWidth={2.5} />
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-                onPress={handleLogout}
+                onPress={handleAccount}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <LogOut size={16} color={colors.textSecondary} strokeWidth={2.5} />
+                <User size={16} color={colors.textSecondary} strokeWidth={2.5} />
               </TouchableOpacity>
             </View>
           </View>

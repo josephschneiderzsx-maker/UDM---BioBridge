@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
   View,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -24,8 +23,7 @@ export default function PrimaryButton({
 }) {
   const { colors } = useTheme();
 
-  const handlePress = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const handlePress = () => {
     onPress?.();
   };
 

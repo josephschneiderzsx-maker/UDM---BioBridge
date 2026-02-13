@@ -39,8 +39,10 @@ Public Class AgentService
     Private isRunning As Boolean = False
     Private pollingThread As Thread
     Private heartbeatThread As Thread
+    Private ingressThread As Thread
     Private serverClient As ServerClient
     Private bioBridgeController As BioBridgeController
+    Private ingressHelper As IngressHelper
     Private agentId As Integer = 0
     Private configManager As ConfigManager
 
@@ -83,6 +85,19 @@ Public Class AgentService
             heartbeatThread.IsBackground = True
             heartbeatThread.Start()
 
+            ' Start ingress sync if enabled
+            If configManager.IngressEnabled Then
+                Try
+                    ingressHelper = New IngressHelper(configManager.IngressConnectionString)
+                    ingressThread = New Thread(AddressOf IngressSyncLoop)
+                    ingressThread.IsBackground = True
+                    ingressThread.Start()
+                    CreateLog("Ingress sync started (interval: " & configManager.GetIngressSyncInterval() & "ms)")
+                Catch ex As Exception
+                    CreateLog("Warning: Could not start ingress sync: " & ex.Message)
+                End Try
+            End If
+
             CreateLog("UDM-Agent service started successfully")
         Catch ex As Exception
             CreateLog("Error in OnStart: " & ex.ToString())
@@ -99,6 +114,10 @@ Public Class AgentService
 
             If heartbeatThread IsNot Nothing AndAlso heartbeatThread.IsAlive Then
                 heartbeatThread.Join(2000)
+            End If
+
+            If ingressThread IsNot Nothing AndAlso ingressThread.IsAlive Then
+                ingressThread.Join(2000)
             End If
 
             If bioBridgeController IsNot Nothing Then
@@ -212,6 +231,25 @@ Public Class AgentService
         End Try
         Return 3000
     End Function
+
+    Private Sub IngressSyncLoop()
+        Dim syncInterval = configManager.GetIngressSyncInterval()
+        While isRunning
+            Try
+                If agentId > 0 AndAlso ingressHelper IsNot Nothing Then
+                    Dim events = ingressHelper.GetNewEvents()
+                    If events.Count > 0 Then
+                        CreateLog("Ingress: Syncing " & events.Count & " new events")
+                        serverClient.SendIngressEvents(agentId, events)
+                    End If
+                End If
+                Thread.Sleep(syncInterval)
+            Catch ex As Exception
+                CreateLog("Error in IngressSyncLoop: " & ex.Message)
+                Thread.Sleep(syncInterval * 2) ' Back off on error
+            End Try
+        End While
+    End Sub
 
     Protected Sub CreateLog(ByVal sMsg As String)
         Dim sSource As String = "UDM-Agent"

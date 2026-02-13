@@ -178,6 +178,34 @@ Public Class ServerClient
         Public Property TerminalPort As Integer
     End Class
 
+    Public Sub SendIngressEvents(agentId As Integer, events As List(Of IngressHelper.IngressEvent))
+        Try
+            If events Is Nothing OrElse events.Count = 0 Then Return
+
+            Dim url = _config.ServerUrl.TrimEnd("/"c) & "/agents/" & agentId & "/events"
+            Dim json As New System.Text.StringBuilder()
+            json.Append("{""events"":[")
+            Dim first = True
+            For Each ev As IngressHelper.IngressEvent In events
+                If Not first Then json.Append(",")
+                first = False
+                json.Append("{""ingress_id"":").Append(ev.IngressId)
+                json.Append(",""event_type"":""").Append(If(String.IsNullOrEmpty(ev.EventType), "ingress_event", ev.EventType.Replace("""", "\"""))).Append("""")
+                json.Append(",""device_ip"":""").Append(If(String.IsNullOrEmpty(ev.DeviceIP), "", ev.DeviceIP)).Append("""")
+                json.Append(",""description"":""").Append(If(String.IsNullOrEmpty(ev.Description), "", ev.Description.Replace("""", "\"""))).Append("""")
+                json.Append("}")
+            Next
+            json.Append("]}")
+
+            SendPostRequest(url, json.ToString())
+        Catch ex As Exception
+            Try
+                EventLog.WriteEntry("UDM-Agent", "SendIngressEvents error: " & ex.Message, EventLogEntryType.Warning)
+            Catch
+            End Try
+        End Try
+    End Sub
+
     Public Sub SendResult(agentId As Integer, commandId As Integer, success As Boolean, result As String, errorMessage As String)
         Try
             Dim url = _config.ServerUrl.TrimEnd("/"c) & "/agents/" & agentId & "/results"

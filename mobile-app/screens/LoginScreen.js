@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   Alert,
@@ -11,6 +10,7 @@ import {
   Animated,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Mail, Lock, Building2, ChevronLeft } from 'lucide-react-native';
 import api from '../services/api';
 import Input from '../components/Input';

@@ -222,8 +222,8 @@ Public Class Service1
 
     Private Sub AddCorsHeaders(response As HttpListenerResponse)
         response.Headers.Add("Access-Control-Allow-Origin", "*")
-        response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        response.Headers.Add("Access-Control-Allow-Headers", "Content-Type")
+        response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization")
     End Sub
 
     Private Sub HandleRequest(state As Object)
@@ -306,6 +306,39 @@ Public Class Service1
             If segments.Length = 2 AndAlso segments(1) = "agents" AndAlso request.HttpMethod = "GET" Then
                 HandleAgentsRequest(context, principal, enterpriseId)
                 Return
+            End If
+
+            ' /{tenant}/users/me...
+            If segments.Length >= 3 AndAlso segments(1) = "users" AndAlso segments(2) = "me" Then
+                HandleUserMeRoutes(context, principal, enterpriseId, segments)
+                Return
+            End If
+
+            ' /{tenant}/users... (admin)
+            If segments.Length >= 2 AndAlso segments(1) = "users" Then
+                HandleUserRoutes(context, principal, enterpriseId, segments)
+                Return
+            End If
+
+            ' /{tenant}/events
+            If segments.Length >= 2 AndAlso segments(1) = "events" AndAlso request.HttpMethod = "GET" Then
+                HandleEventsRequest(context, principal, enterpriseId)
+                Return
+            End If
+
+            ' /{tenant}/notifications...
+            If segments.Length >= 2 AndAlso segments(1) = "notifications" Then
+                HandleNotificationRoutes(context, principal, enterpriseId, segments)
+                Return
+            End If
+
+            ' /{tenant}/commands/{id}
+            If segments.Length = 3 AndAlso segments(1) = "commands" AndAlso request.HttpMethod = "GET" Then
+                Dim cmdId As Integer
+                If Integer.TryParse(segments(2), cmdId) Then
+                    HandleGetCommandResult(context, principal, enterpriseId, cmdId)
+                    Return
+                End If
             End If
 
             ' /{tenant}/doors...
@@ -509,6 +542,386 @@ Public Class Service1
         
         Return String.Equals(hashString, cleanStoredHash, StringComparison.Ordinal)
     End Function
+
+    ' ===== Utility Methods =====
+    Private Function HashPassword(plainPassword As String) As String
+        Dim bytes = Encoding.UTF8.GetBytes(plainPassword)
+        Using sha = System.Security.Cryptography.SHA256.Create()
+            Dim hash = sha.ComputeHash(bytes)
+            Return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant()
+        End Using
+    End Function
+
+    Private Function ReadRequestBody(request As HttpListenerRequest) As String
+        If Not request.HasEntityBody Then Return ""
+        Dim inputStream As System.IO.Stream = request.InputStream
+        Dim encoding As System.Text.Encoding = request.ContentEncoding
+        Using reader As New System.IO.StreamReader(inputStream, encoding)
+            Return reader.ReadToEnd()
+        End Using
+    End Function
+
+    ' ===== User Profile Routes =====
+    Private Sub HandleUserMeRoutes(context As HttpListenerContext, principal As ClaimsPrincipal, enterpriseId As Integer, segments As String())
+        Dim request = context.Request
+        Dim response = context.Response
+        Dim userId As Integer = PermissionChecker.GetUserIdFromClaims(principal)
+
+        ' GET /{tenant}/users/me
+        If segments.Length = 3 AndAlso request.HttpMethod = "GET" Then
+            Dim profile = db.GetUserProfile(userId, enterpriseId)
+            If profile Is Nothing Then
+                response.StatusCode = 404
+                SendJsonResponse(response, "{""error"":""User not found""}")
+                Return
+            End If
+            Dim json = "{""id"":" & profile.Id & ",""email"":""" & profile.Email.Replace("""", "\""") & """,""first_name"":""" & profile.FirstName.Replace("""", "\""") & """,""last_name"":""" & profile.LastName.Replace("""", "\""") & """,""is_admin"":" & If(profile.IsAdmin, "true", "false") & "}"
+            response.StatusCode = 200
+            SendJsonResponse(response, json)
+            Return
+        End If
+
+        ' PUT /{tenant}/users/me
+        If segments.Length = 3 AndAlso request.HttpMethod = "PUT" Then
+            Dim body = ReadRequestBody(request)
+            Dim firstName = ExtractJsonString(body, "first_name")
+            Dim lastName = ExtractJsonString(body, "last_name")
+            If String.IsNullOrEmpty(firstName) OrElse String.IsNullOrEmpty(lastName) Then
+                response.StatusCode = 400
+                SendJsonResponse(response, "{""error"":""Missing first_name or last_name""}")
+                Return
+            End If
+            db.UpdateUserProfile(userId, firstName, lastName)
+            response.StatusCode = 200
+            SendJsonResponse(response, "{""success"":true,""message"":""Profile updated""}")
+            Return
+        End If
+
+        ' PUT /{tenant}/users/me/password
+        If segments.Length = 4 AndAlso segments(3) = "password" AndAlso request.HttpMethod = "PUT" Then
+            Dim body = ReadRequestBody(request)
+            Dim currentPassword = ExtractJsonString(body, "current_password")
+            Dim newPassword = ExtractJsonString(body, "new_password")
+            If String.IsNullOrEmpty(currentPassword) OrElse String.IsNullOrEmpty(newPassword) Then
+                response.StatusCode = 400
+                SendJsonResponse(response, "{""error"":""Missing current_password or new_password""}")
+                Return
+            End If
+
+            ' Verify current password
+            Dim storedHash = db.GetUserPasswordHash(userId)
+            If Not PasswordMatches(currentPassword, storedHash) Then
+                response.StatusCode = 401
+                SendJsonResponse(response, "{""error"":""Current password is incorrect""}")
+                Return
+            End If
+
+            Dim newHash = HashPassword(newPassword)
+            db.UpdateUserPassword(userId, newHash)
+            response.StatusCode = 200
+            SendJsonResponse(response, "{""success"":true,""message"":""Password changed""}")
+            Return
+        End If
+
+        SendNotFound(response)
+    End Sub
+
+    ' ===== User Management Routes (Admin) =====
+    Private Sub HandleUserRoutes(context As HttpListenerContext, principal As ClaimsPrincipal, enterpriseId As Integer, segments As String())
+        Dim request = context.Request
+        Dim response = context.Response
+        Dim isAdmin As Boolean = PermissionChecker.IsAdminFromClaims(principal)
+
+        If Not isAdmin Then
+            response.StatusCode = 403
+            SendJsonResponse(response, "{""error"":""Admin access required""}")
+            Return
+        End If
+
+        ' GET /{tenant}/users
+        If segments.Length = 2 AndAlso request.HttpMethod = "GET" Then
+            Dim users = db.GetUsersForEnterprise(enterpriseId)
+            Dim json As New System.Text.StringBuilder()
+            json.Append("{""users"":[")
+            Dim first As Boolean = True
+            For Each u As DatabaseHelper.UserProfile In users
+                If Not first Then json.Append(",")
+                first = False
+                json.Append("{""id"":").Append(u.Id)
+                json.Append(",""email"":""").Append(u.Email.Replace("""", "\""")).Append("""")
+                json.Append(",""first_name"":""").Append(u.FirstName.Replace("""", "\""")).Append("""")
+                json.Append(",""last_name"":""").Append(u.LastName.Replace("""", "\""")).Append("""")
+                json.Append(",""is_admin"":").Append(If(u.IsAdmin, "true", "false"))
+                json.Append("}")
+            Next
+            json.Append("]}")
+            response.StatusCode = 200
+            SendJsonResponse(response, json.ToString())
+            Return
+        End If
+
+        ' POST /{tenant}/users
+        If segments.Length = 2 AndAlso request.HttpMethod = "POST" Then
+            Dim body = ReadRequestBody(request)
+            Dim email = ExtractJsonString(body, "email")
+            Dim password = ExtractJsonString(body, "password")
+            Dim firstName = ExtractJsonString(body, "first_name")
+            Dim lastName = ExtractJsonString(body, "last_name")
+            Dim isAdminStr = ExtractJsonBoolean(body, "is_admin")
+
+            If String.IsNullOrEmpty(email) OrElse String.IsNullOrEmpty(password) OrElse String.IsNullOrEmpty(firstName) OrElse String.IsNullOrEmpty(lastName) Then
+                response.StatusCode = 400
+                SendJsonResponse(response, "{""error"":""Missing required fields: email, password, first_name, last_name""}")
+                Return
+            End If
+
+            Dim newIsAdmin As Boolean = (isAdminStr = "true")
+            Dim passwordHash = HashPassword(password)
+
+            Try
+                Dim newUserId = db.CreateUser(enterpriseId, email, passwordHash, firstName, lastName, newIsAdmin)
+                response.StatusCode = 201
+                SendJsonResponse(response, "{""success"":true,""user_id"":" & newUserId & "}")
+            Catch ex As Exception
+                If ex.Message.Contains("Duplicate") Then
+                    response.StatusCode = 409
+                    SendJsonResponse(response, "{""error"":""Email already exists""}")
+                Else
+                    response.StatusCode = 500
+                    SendJsonResponse(response, "{""error"":""Failed to create user""}")
+                End If
+            End Try
+            Return
+        End If
+
+        If segments.Length < 3 Then
+            SendNotFound(response)
+            Return
+        End If
+
+        Dim targetUserId As Integer
+        If Not Integer.TryParse(segments(2), targetUserId) Then
+            SendNotFound(response)
+            Return
+        End If
+
+        ' PUT /{tenant}/users/{id}
+        If segments.Length = 3 AndAlso request.HttpMethod = "PUT" Then
+            Dim body = ReadRequestBody(request)
+            Dim firstName = ExtractJsonString(body, "first_name")
+            Dim lastName = ExtractJsonString(body, "last_name")
+            Dim isAdminStr = ExtractJsonBoolean(body, "is_admin")
+
+            If String.IsNullOrEmpty(firstName) OrElse String.IsNullOrEmpty(lastName) Then
+                response.StatusCode = 400
+                SendJsonResponse(response, "{""error"":""Missing first_name or last_name""}")
+                Return
+            End If
+
+            Dim targetIsAdmin As Boolean = (isAdminStr = "true")
+            db.UpdateUser(targetUserId, firstName, lastName, targetIsAdmin)
+            response.StatusCode = 200
+            SendJsonResponse(response, "{""success"":true,""message"":""User updated""}")
+            Return
+        End If
+
+        ' DELETE /{tenant}/users/{id}
+        If segments.Length = 3 AndAlso request.HttpMethod = "DELETE" Then
+            db.DeleteUser(targetUserId)
+            response.StatusCode = 200
+            SendJsonResponse(response, "{""success"":true,""message"":""User deleted""}")
+            Return
+        End If
+
+        ' GET /{tenant}/users/{id}/permissions
+        If segments.Length = 4 AndAlso segments(3) = "permissions" AndAlso request.HttpMethod = "GET" Then
+            Dim perms = db.GetUserPermissions(targetUserId)
+            Dim json As New System.Text.StringBuilder()
+            json.Append("{""permissions"":[")
+            Dim first As Boolean = True
+            For Each p As DatabaseHelper.UserPermission In perms
+                If Not first Then json.Append(",")
+                first = False
+                json.Append("{""door_id"":").Append(p.DoorId)
+                json.Append(",""door_name"":""").Append(p.DoorName.Replace("""", "\""")).Append("""")
+                json.Append(",""can_open"":").Append(If(p.CanOpen, "true", "false"))
+                json.Append(",""can_close"":").Append(If(p.CanClose, "true", "false"))
+                json.Append(",""can_view_status"":").Append(If(p.CanViewStatus, "true", "false"))
+                json.Append("}")
+            Next
+            json.Append("]}")
+            response.StatusCode = 200
+            SendJsonResponse(response, json.ToString())
+            Return
+        End If
+
+        ' PUT /{tenant}/users/{id}/permissions
+        If segments.Length = 4 AndAlso segments(3) = "permissions" AndAlso request.HttpMethod = "PUT" Then
+            Dim body = ReadRequestBody(request)
+            ' Parse permissions array from body: {"permissions":[{"door_id":1,"can_open":true,...},...]}
+            Dim permissions As New List(Of DatabaseHelper.UserPermission)()
+            Dim permsStart = body.IndexOf("[")
+            Dim permsEnd = body.LastIndexOf("]")
+            If permsStart >= 0 AndAlso permsEnd > permsStart Then
+                Dim permsJson = body.Substring(permsStart, permsEnd - permsStart + 1)
+                Dim idx = 0
+                While idx < permsJson.Length
+                    Dim objStart = permsJson.IndexOf("{"c, idx)
+                    If objStart = -1 Then Exit While
+                    Dim objEnd = permsJson.IndexOf("}"c, objStart)
+                    If objEnd = -1 Then Exit While
+                    Dim objJson = permsJson.Substring(objStart, objEnd - objStart + 1)
+
+                    Dim perm As New DatabaseHelper.UserPermission()
+                    Dim doorIdStr = ExtractJsonNumber(objJson, "door_id")
+                    If Not String.IsNullOrEmpty(doorIdStr) Then
+                        perm.DoorId = Integer.Parse(doorIdStr)
+                        perm.CanOpen = (ExtractJsonBoolean(objJson, "can_open") = "true")
+                        perm.CanClose = (ExtractJsonBoolean(objJson, "can_close") = "true")
+                        perm.CanViewStatus = (ExtractJsonBoolean(objJson, "can_view_status") = "true")
+                        permissions.Add(perm)
+                    End If
+                    idx = objEnd + 1
+                End While
+            End If
+
+            db.SetUserPermissions(targetUserId, permissions)
+            response.StatusCode = 200
+            SendJsonResponse(response, "{""success"":true,""message"":""Permissions updated""}")
+            Return
+        End If
+
+        SendNotFound(response)
+    End Sub
+
+    ' ===== Events Route =====
+    Private Sub HandleEventsRequest(context As HttpListenerContext, principal As ClaimsPrincipal, enterpriseId As Integer)
+        Dim request = context.Request
+        Dim response = context.Response
+        Dim userId As Integer = PermissionChecker.GetUserIdFromClaims(principal)
+        Dim isAdmin As Boolean = PermissionChecker.IsAdminFromClaims(principal)
+
+        Dim doorIdParam = request.QueryString("door_id")
+        Dim limitParam = request.QueryString("limit")
+        Dim doorId As Integer? = Nothing
+        Dim limit As Integer = 50
+
+        If Not String.IsNullOrEmpty(doorIdParam) Then
+            Dim did As Integer
+            If Integer.TryParse(doorIdParam, did) Then doorId = did
+        End If
+        If Not String.IsNullOrEmpty(limitParam) Then
+            Integer.TryParse(limitParam, limit)
+        End If
+        If limit > 200 Then limit = 200
+
+        Dim events = db.GetDoorEvents(enterpriseId, userId, isAdmin, doorId, limit)
+        Dim json As New System.Text.StringBuilder()
+        json.Append("{""events"":[")
+        Dim first As Boolean = True
+        For Each ev As DatabaseHelper.DoorEventInfo In events
+            If Not first Then json.Append(",")
+            first = False
+            json.Append("{""id"":").Append(ev.Id)
+            json.Append(",""door_id"":").Append(ev.DoorId)
+            json.Append(",""door_name"":""").Append(ev.DoorName.Replace("""", "\""")).Append("""")
+            json.Append(",""event_type"":""").Append(ev.EventType.Replace("""", "\""")).Append("""")
+            If Not String.IsNullOrEmpty(ev.EventData) Then
+                json.Append(",""event_data"":""").Append(ev.EventData.Replace("""", "\""")).Append("""")
+            End If
+            json.Append(",""source"":""").Append(ev.Source).Append("""")
+            json.Append(",""created_at"":""").Append(ev.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")).Append("""")
+            json.Append("}")
+        Next
+        json.Append("]}")
+        response.StatusCode = 200
+        SendJsonResponse(response, json.ToString())
+    End Sub
+
+    ' ===== Notification Preferences Routes =====
+    Private Sub HandleNotificationRoutes(context As HttpListenerContext, principal As ClaimsPrincipal, enterpriseId As Integer, segments As String())
+        Dim request = context.Request
+        Dim response = context.Response
+        Dim userId As Integer = PermissionChecker.GetUserIdFromClaims(principal)
+
+        ' GET /{tenant}/notifications
+        If segments.Length = 2 AndAlso request.HttpMethod = "GET" Then
+            Dim prefs = db.GetNotificationPreferences(userId)
+            Dim json As New System.Text.StringBuilder()
+            json.Append("{""preferences"":[")
+            Dim first As Boolean = True
+            For Each p As DatabaseHelper.NotificationPreference In prefs
+                If Not first Then json.Append(",")
+                first = False
+                json.Append("{""door_id"":").Append(p.DoorId)
+                json.Append(",""door_name"":""").Append(p.DoorName.Replace("""", "\""")).Append("""")
+                json.Append(",""notify_on_open"":").Append(If(p.NotifyOnOpen, "true", "false"))
+                json.Append(",""notify_on_close"":").Append(If(p.NotifyOnClose, "true", "false"))
+                json.Append(",""notify_on_forced"":").Append(If(p.NotifyOnForced, "true", "false"))
+                json.Append("}")
+            Next
+            json.Append("]}")
+            response.StatusCode = 200
+            SendJsonResponse(response, json.ToString())
+            Return
+        End If
+
+        ' PUT /{tenant}/notifications
+        If segments.Length = 2 AndAlso request.HttpMethod = "PUT" Then
+            Dim body = ReadRequestBody(request)
+            Dim doorIdStr = ExtractJsonNumber(body, "door_id")
+            If String.IsNullOrEmpty(doorIdStr) Then
+                response.StatusCode = 400
+                SendJsonResponse(response, "{""error"":""Missing door_id""}")
+                Return
+            End If
+            Dim doorId = Integer.Parse(doorIdStr)
+            Dim notifyOpen = (ExtractJsonBoolean(body, "notify_on_open") = "true")
+            Dim notifyClose = (ExtractJsonBoolean(body, "notify_on_close") = "true")
+            Dim notifyForced = (ExtractJsonBoolean(body, "notify_on_forced") = "true")
+            db.SetNotificationPreference(userId, doorId, notifyOpen, notifyClose, notifyForced)
+            response.StatusCode = 200
+            SendJsonResponse(response, "{""success"":true,""message"":""Notification preferences updated""}")
+            Return
+        End If
+
+        SendNotFound(response)
+    End Sub
+
+    Private Sub HandleGetCommandResult(context As HttpListenerContext, principal As ClaimsPrincipal, enterpriseId As Integer, cmdId As Integer)
+        Dim response = context.Response
+        Dim userId As Integer = PermissionChecker.GetUserIdFromClaims(principal)
+        Dim isAdmin As Boolean = PermissionChecker.IsAdminFromClaims(principal)
+
+        Dim cmdResult = commandQueue.GetCommandById(cmdId)
+        If cmdResult Is Nothing Then
+            response.StatusCode = 404
+            SendJsonResponse(response, "{""error"":""Command not found""}")
+            Return
+        End If
+
+        ' Verify ownership: admin or own command
+        If Not isAdmin AndAlso cmdResult.UserId.HasValue AndAlso cmdResult.UserId.Value <> userId Then
+            response.StatusCode = 403
+            SendJsonResponse(response, "{""error"":""Access denied""}")
+            Return
+        End If
+
+        Dim json As New System.Text.StringBuilder()
+        json.Append("{""id"":").Append(cmdResult.Id)
+        json.Append(",""status"":""").Append(cmdResult.Status).Append("""")
+        json.Append(",""command_type"":""").Append(cmdResult.CommandType).Append("""")
+        If Not String.IsNullOrEmpty(cmdResult.Result) Then
+            json.Append(",""result"":""").Append(cmdResult.Result.Replace("""", "\""")).Append("""")
+        End If
+        If Not String.IsNullOrEmpty(cmdResult.ErrorMessage) Then
+            json.Append(",""error_message"":""").Append(cmdResult.ErrorMessage.Replace("""", "\""")).Append("""")
+        End If
+        json.Append("}")
+
+        response.StatusCode = 200
+        SendJsonResponse(response, json.ToString())
+    End Sub
 
     Private Sub HandleDoorRoutes(context As HttpListenerContext,
                                  principal As ClaimsPrincipal,
@@ -1139,6 +1552,12 @@ Public Class Service1
                 Else
                     SendNotFound(response)
                 End If
+            Case "events"
+                If request.HttpMethod = "POST" Then
+                    HandleAgentIngressEvents(context, agentId)
+                Else
+                    SendNotFound(response)
+                End If
             Case Else
                 SendNotFound(response)
         End Select
@@ -1373,6 +1792,65 @@ Public Class Service1
                 SendJsonResponse(response, json.ToString())
             End Using
         End Using
+    End Sub
+
+    Private Sub HandleAgentIngressEvents(context As HttpListenerContext, agentId As Integer)
+        Dim request = context.Request
+        Dim response = context.Response
+
+        Dim body = ReadRequestBody(request)
+        CreateLog("Agent ingress events - Body: " & body)
+
+        ' Get enterprise_id for this agent
+        Dim enterpriseIdOpt = db.GetEnterpriseIdForAgent(agentId)
+        If Not enterpriseIdOpt.HasValue Then
+            response.StatusCode = 400
+            SendJsonResponse(response, "{""error"":""Unknown agent""}")
+            Return
+        End If
+        Dim enterpriseId = enterpriseIdOpt.Value
+
+        ' Parse events array: {"events":[{"ingress_id":1,"event_type":"door_open","event_time":"...","device_ip":"...","description":"..."},...]}
+        Dim inserted As Integer = 0
+        Dim eventsStart = body.IndexOf("[")
+        Dim eventsEnd = body.LastIndexOf("]")
+        If eventsStart >= 0 AndAlso eventsEnd > eventsStart Then
+            Dim eventsJson = body.Substring(eventsStart, eventsEnd - eventsStart + 1)
+            Dim idx = 0
+            While idx < eventsJson.Length
+                Dim objStart = eventsJson.IndexOf("{"c, idx)
+                If objStart = -1 Then Exit While
+                Dim objEnd = eventsJson.IndexOf("}"c, objStart)
+                If objEnd = -1 Then Exit While
+                Dim objJson = eventsJson.Substring(objStart, objEnd - objStart + 1)
+
+                Dim deviceIp = ExtractJsonString(objJson, "device_ip")
+                Dim eventType = ExtractJsonString(objJson, "event_type")
+                Dim description = ExtractJsonString(objJson, "description")
+                Dim ingressIdStr = ExtractJsonNumber(objJson, "ingress_id")
+
+                If Not String.IsNullOrEmpty(deviceIp) Then
+                    ' Map device_ip to door_id
+                    Dim doorIdOpt = db.GetDoorIdByTerminalIP(enterpriseId, deviceIp)
+                    If doorIdOpt.HasValue Then
+                        Dim ingressId As Integer? = Nothing
+                        If Not String.IsNullOrEmpty(ingressIdStr) Then
+                            Dim iid As Integer
+                            If Integer.TryParse(ingressIdStr, iid) Then ingressId = iid
+                        End If
+                        db.InsertDoorEvent(doorIdOpt.Value, If(String.IsNullOrEmpty(eventType), "ingress_event", eventType), description, Nothing, agentId, "ingress", ingressId)
+                        inserted += 1
+                    Else
+                        CreateLog("Agent ingress - No door found for IP: " & deviceIp)
+                    End If
+                End If
+
+                idx = objEnd + 1
+            End While
+        End If
+
+        response.StatusCode = 200
+        SendJsonResponse(response, "{""status"":""ok"",""inserted"":" & inserted & "}")
     End Sub
 
     Private Sub SendJsonResponse(response As HttpListenerResponse, jsonResponse As String)

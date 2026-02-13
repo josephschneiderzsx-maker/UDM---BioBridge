@@ -3,12 +3,18 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
 import { StatusBar, View, Animated, StyleSheet, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ServerConfigScreen from './screens/ServerConfigScreen';
 import LoginScreen from './screens/LoginScreen';
 import DoorListScreen from './screens/DoorListScreen';
 import DoorControlScreen from './screens/DoorControlScreen';
 import AddDoorScreen from './screens/AddDoorScreen';
 import EditDoorScreen from './screens/EditDoorScreen';
+import AccountScreen from './screens/AccountScreen';
+import UsersListScreen from './screens/UsersListScreen';
+import CreateUserScreen from './screens/CreateUserScreen';
+import UserPermissionsScreen from './screens/UserPermissionsScreen';
+import ActivityLogScreen from './screens/ActivityLogScreen';
 import { colors } from './constants/theme';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 
@@ -251,6 +257,46 @@ function AppNavigator() {
               gestureEnabled: true,
             }}
           />
+          <Stack.Screen
+            name="Account"
+            component={AccountScreen}
+            options={{
+              ...TransitionPresets.SlideFromRightIOS,
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="UsersList"
+            component={UsersListScreen}
+            options={{
+              ...TransitionPresets.SlideFromRightIOS,
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="CreateUser"
+            component={CreateUserScreen}
+            options={{
+              ...TransitionPresets.SlideFromRightIOS,
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="UserPermissions"
+            component={UserPermissionsScreen}
+            options={{
+              ...TransitionPresets.SlideFromRightIOS,
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="ActivityLog"
+            component={ActivityLogScreen}
+            options={{
+              ...TransitionPresets.SlideFromRightIOS,
+              gestureEnabled: true,
+            }}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </>
@@ -259,8 +305,10 @@ function AppNavigator() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppNavigator />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AppNavigator />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
