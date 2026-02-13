@@ -8,7 +8,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LayoutList, Plus, User, History } from 'lucide-react-native';
 import Logo from './components/Logo';
 import { RootNavigationProvider } from './contexts/RootNavigationContext';
-import ServerConfigScreen from './screens/ServerConfigScreen';
 import LoginScreen from './screens/LoginScreen';
 import DoorListScreen from './screens/DoorListScreen';
 import DoorControlScreen from './screens/DoorControlScreen';
@@ -211,19 +210,16 @@ function AppNavigator() {
 
   const checkInitialState = async () => {
     try {
-      const serverUrl = await AsyncStorage.getItem('serverUrl');
       const token = await AsyncStorage.getItem('token');
       const tenant = await AsyncStorage.getItem('tenant');
 
-      if (!serverUrl) {
-        setInitialRoute('ServerConfig');
-      } else if (!token || !tenant) {
+      if (!token || !tenant) {
         setInitialRoute('Login');
       } else {
         setInitialRoute('MainTabs');
       }
     } catch (error) {
-      setInitialRoute('ServerConfig');
+      setInitialRoute('Login');
     }
   };
 
@@ -265,7 +261,6 @@ function AppNavigator() {
               ...TransitionPresets.SlideFromRightIOS,
             }}
           >
-            <Stack.Screen name="ServerConfig" component={ServerConfigScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="MainTabs" component={MainTabs} />
           </Stack.Navigator>

@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SERVER_URL } from '../config';
 
 class ApiService {
   constructor() {
@@ -8,27 +9,26 @@ class ApiService {
   }
 
   async initialize() {
-    this.baseUrl = await AsyncStorage.getItem('serverUrl');
+    // Production: use hardcoded SERVER_URL. Dev override: AsyncStorage 'serverUrl' if set.
+    const override = await AsyncStorage.getItem('serverUrl');
+    this.baseUrl = override || SERVER_URL;
     this.token = await AsyncStorage.getItem('token');
     this.tenant = await AsyncStorage.getItem('tenant');
   }
 
   async setServerUrl(url) {
     if (!url) {
-      this.baseUrl = null;
+      this.baseUrl = SERVER_URL;
       await AsyncStorage.removeItem('serverUrl');
       return;
     }
 
-    // Normaliser l'URL : ajouter http:// si manquant
     let normalizedUrl = url.trim();
     if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
       normalizedUrl = 'http://' + normalizedUrl;
     }
-    
-    // Retirer le slash final s'il existe
     normalizedUrl = normalizedUrl.replace(/\/$/, '');
-    
+
     this.baseUrl = normalizedUrl;
     await AsyncStorage.setItem('serverUrl', normalizedUrl);
   }

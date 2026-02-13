@@ -6,12 +6,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  TouchableOpacity,
   Animated,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Mail, Lock, Building2, ChevronLeft } from 'lucide-react-native';
+import { Mail, Lock, Building2 } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
 import Input from '../components/Input';
 import PrimaryButton from '../components/PrimaryButton';
@@ -23,14 +23,14 @@ export default function LoginScreen({ navigation }) {
   const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [tenant, setTenant] = useState('entreprise-1');
+  const [tenant, setTenant] = useState('');
   const [loading, setLoading] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
-    checkServerUrl();
+    loadSavedTenant();
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -46,15 +46,11 @@ export default function LoginScreen({ navigation }) {
     ]).start();
   }, []);
 
-  const checkServerUrl = async () => {
+  const loadSavedTenant = async () => {
     try {
-      await api.initialize();
-      if (!api.baseUrl) {
-        navigation.replace('ServerConfig');
-      }
-    } catch (error) {
-      navigation.replace('ServerConfig');
-    }
+      const savedTenant = await AsyncStorage.getItem('tenant');
+      if (savedTenant) setTenant(savedTenant);
+    } catch {}
   };
 
   const handleLogin = async () => {
@@ -89,13 +85,6 @@ export default function LoginScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-            onPress={() => navigation.replace('ServerConfig')}
-          >
-            <ChevronLeft size={20} color={colors.textSecondary} strokeWidth={2.5} />
-          </TouchableOpacity>
-
           <Animated.View
             style={[
               styles.content,
@@ -165,15 +154,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
     paddingBottom: spacing.xxxl,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.xxl,
-    borderWidth: 1,
   },
   content: {
     flex: 1,
