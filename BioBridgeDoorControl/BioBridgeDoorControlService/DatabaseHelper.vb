@@ -33,6 +33,51 @@ Public Class DatabaseHelper
         End Using
     End Function
 
+    ''' <summary>Returns "Valid", "GracePeriod", "Expired", or "NotStarted". No end_date = Valid. Expired = today > end_date + 3 days.</summary>
+    Public Function GetEnterpriseLicenseStatus(enterpriseId As Integer) As String
+        Dim info = GetEnterpriseLicenseInfo(enterpriseId)
+        Return info.Status
+    End Function
+
+    ''' <summary>Returns status, end_date (nullable), grace_until (end_date + 3 days, nullable).</summary>
+    Public Function GetEnterpriseLicenseInfo(enterpriseId As Integer) As LicenseInfo
+        Dim result As New LicenseInfo()
+        result.Status = "Valid"
+        result.EndDate = Nothing
+        result.GraceUntil = Nothing
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand("SELECT license_start_date, license_end_date FROM enterprises WHERE id = @id", conn)
+                cmd.Parameters.AddWithValue("@id", enterpriseId)
+                Using rdr = cmd.ExecuteReader()
+                    If Not rdr.Read() Then Return result
+                    Dim startDate As DateTime? = Nothing
+                    Dim endDate As DateTime? = Nothing
+                    If Not rdr.IsDBNull(0) Then startDate = rdr.GetDateTime(0)
+                    If Not rdr.IsDBNull(1) Then endDate = rdr.GetDateTime(1)
+                    Dim today = DateTime.Today
+                    If startDate.HasValue AndAlso today < startDate.Value.Date Then
+                        result.Status = "NotStarted"
+                        Return result
+                    End If
+                    If Not endDate.HasValue Then Return result
+                    Dim endVal = endDate.Value.Date
+                    result.EndDate = endVal
+                    result.GraceUntil = endVal.AddDays(3)
+                    If today > endVal.AddDays(3) Then
+                        result.Status = "Expired"
+                        Return result
+                    End If
+                    If today > endVal Then
+                        result.Status = "GracePeriod"
+                        Return result
+                    End If
+                    result.Status = "Valid"
+                    Return result
+                End Using
+            End Using
+        End Using
+    End Function
+
     Public Function GetAgentIdForDoor(doorId As Integer) As Integer?
         Using conn = GetConnection()
             Using cmd = New MySqlCommand("SELECT agent_id FROM doors WHERE id = @id AND is_active = 1", conn)
@@ -557,6 +602,12 @@ Public Class DatabaseHelper
     Public Class AgentInfo
         Public Property Id As Integer
         Public Property Name As String
+    End Class
+
+    Public Class LicenseInfo
+        Public Property Status As String
+        Public Property EndDate As DateTime?
+        Public Property GraceUntil As DateTime?
     End Class
 
 End Class

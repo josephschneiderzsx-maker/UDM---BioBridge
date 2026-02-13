@@ -10,6 +10,8 @@ CREATE TABLE enterprises (
   name VARCHAR(255) NOT NULL,
   door_quota INT NOT NULL DEFAULT 10,
   user_quota INT NOT NULL DEFAULT 20,
+  license_start_date DATE NULL,
+  license_end_date DATE NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   is_active TINYINT(1) NOT NULL DEFAULT 1
 );
@@ -133,9 +135,9 @@ CREATE TABLE door_events (
   INDEX idx_door_created (door_id, created_at)
 );
 
--- Données de test
-INSERT INTO enterprises (slug, name, door_quota, user_quota) VALUES
-('entreprise-1', 'Entreprise 1', 10, 20);
+-- Données de test (license_start_date / license_end_date NULL = pas de restriction)
+INSERT INTO enterprises (slug, name, door_quota, user_quota, license_start_date, license_end_date) VALUES
+('entreprise-1', 'Entreprise 1', 10, 20, NULL, NULL);
 
 INSERT INTO agents (enterprise_id, name, agent_key, is_online)
 VALUES (1, 'PC Bureau Principal', 'CHANGE_ME_AGENT_KEY_1', 0);

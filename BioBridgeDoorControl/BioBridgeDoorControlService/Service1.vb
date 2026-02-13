@@ -74,6 +74,7 @@ Public Class Service1
     Private Const HTTP_PORT As Integer = 8080
     Private Const DEFAULT_TERMINAL_IP As String = "192.168.40.10"
     Private Const DEFAULT_TERMINAL_PORT As Integer = 4370
+    Private Const LICENSE_EXPIRED_JSON As String = "{""error"":""license_expired"",""message"":""Your license has expired. You will not be able to use the service within 3 days. Please contact URZIS for renewal or suspension: sales@urzis.com. If you think this is a mistake, we are sorry; contact us for arrangement.""}"
 
     ' Accès base et auth
     Private ReadOnly db As New DatabaseHelper()
@@ -296,6 +297,20 @@ Public Class Service1
                 Return
             End If
 
+            ' /{tenant}/license-status (avant le blocage licence pour que le mobile puisse toujours le consulter)
+            If segments.Length = 2 AndAlso segments(1) = "license-status" AndAlso request.HttpMethod = "GET" Then
+                HandleLicenseStatusRequest(context, principal, enterpriseId)
+                Return
+            End If
+
+            ' Licence entreprise: bloquer si Expired ou NotStarted
+            Dim licenseStatus As String = db.GetEnterpriseLicenseStatus(enterpriseId)
+            If licenseStatus = "Expired" OrElse licenseStatus = "NotStarted" Then
+                response.StatusCode = 403
+                SendJsonResponse(response, LICENSE_EXPIRED_JSON)
+                Return
+            End If
+
             ' /{tenant}/quota
             If segments.Length = 2 AndAlso segments(1) = "quota" AndAlso request.HttpMethod = "GET" Then
                 HandleQuotaRequest(context, principal, enterpriseId)
@@ -458,6 +473,14 @@ Public Class Service1
             Return
         End If
 
+        ' Licence entreprise: ne pas délivrer de token si Expired ou NotStarted
+        Dim licenseStatus As String = db.GetEnterpriseLicenseStatus(enterpriseId)
+        If licenseStatus = "Expired" OrElse licenseStatus = "NotStarted" Then
+            response.StatusCode = 403
+            SendJsonResponse(response, LICENSE_EXPIRED_JSON)
+            Return
+        End If
+
         Dim token = auth.GenerateToken(user.Id, enterpriseId, email, user.IsAdmin)
         response.StatusCode = 200
         SendJsonResponse(response, "{""token"":""" & token & """}")
@@ -481,6 +504,16 @@ Public Class Service1
         
         response.StatusCode = 200
         SendJsonResponse(response, "{""quota"":" & quota & ",""used"":" & currentCount & ",""remaining"":" & remaining & "}")
+    End Sub
+
+    Private Sub HandleLicenseStatusRequest(context As HttpListenerContext, principal As ClaimsPrincipal, enterpriseId As Integer)
+        Dim response = context.Response
+        Dim info As DatabaseHelper.LicenseInfo = db.GetEnterpriseLicenseInfo(enterpriseId)
+        Dim endStr As String = If(info.EndDate.HasValue, """" & info.EndDate.Value.ToString("yyyy-MM-dd") & """", "null")
+        Dim graceStr As String = If(info.GraceUntil.HasValue, """" & info.GraceUntil.Value.ToString("yyyy-MM-dd") & """", "null")
+        Dim json = "{""status"":""" & info.Status.Replace("""", "\""") & """,""end_date"":" & endStr & ",""grace_until"":" & graceStr & "}"
+        response.StatusCode = 200
+        SendJsonResponse(response, json)
     End Sub
 
     Private Sub HandleAgentsRequest(context As HttpListenerContext, principal As ClaimsPrincipal, enterpriseId As Integer)

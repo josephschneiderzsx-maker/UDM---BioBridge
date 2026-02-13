@@ -68,7 +68,11 @@ export default function LoginScreen({ navigation }) {
       await api.login(email.trim(), password, tenant.trim());
       navigation.replace('MainTabs');
     } catch (error) {
-      Alert.alert('Sign In Failed', error.message);
+      if (error.isLicenseExpired) {
+        Alert.alert('License Expired', error.message);
+      } else {
+        Alert.alert('Sign In Failed', error.message);
+      }
     } finally {
       setLoading(false);
     }

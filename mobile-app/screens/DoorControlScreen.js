@@ -17,19 +17,39 @@ import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useRootNavigation } from '../contexts/RootNavigationContext';
 import Logo from '../components/Logo';
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BUTTON_SIZE = Math.min(width * 0.45, 180);
 const DISMISS_THRESHOLD = 120;
 
+const LICENSE_ALERT_TITLE = 'License Expired';
+
+function formatGraceUntil(graceUntil) {
+  if (!graceUntil) return '';
+  const d = new Date(graceUntil);
+  if (Number.isNaN(d.getTime())) return graceUntil;
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function showLicenseAlert(message, onDismiss) {
+  Alert.alert(
+    LICENSE_ALERT_TITLE,
+    message || 'Your license has expired. Please contact URZIS for renewal or suspension: sales@urzis.com. If you think this is a mistake, contact us for arrangement.',
+    [{ text: 'OK', onPress: onDismiss }]
+  );
+}
+
 export default function DoorControlScreen({ route, navigation }) {
   const { colors, isDark } = useTheme();
+  const { resetToLogin } = useRootNavigation();
   const { door } = route.params;
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('Secured');
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [licenseStatus, setLicenseStatus] = useState(null);
 
   const scaleAnim = useRef(new Animated.Value(0.96)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -84,6 +104,33 @@ export default function DoorControlScreen({ route, navigation }) {
       }),
     ]).start();
 
+    const loadLicenseStatus = async () => {
+      try {
+        const data = await api.getLicenseStatus();
+        setLicenseStatus(data);
+      } catch {
+        setLicenseStatus(null);
+      }
+    };
+    loadLicenseStatus();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      const loadLicenseStatus = async () => {
+        try {
+          const data = await api.getLicenseStatus();
+          setLicenseStatus(data);
+        } catch {
+          setLicenseStatus(null);
+        }
+      };
+      loadLicenseStatus();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  useEffect(() => {
     // Subtle breathing
     Animated.loop(
       Animated.sequence([
@@ -208,7 +255,11 @@ export default function DoorControlScreen({ route, navigation }) {
       }, 3000);
     } catch (error) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message);
+      if (error.isLicenseExpired) {
+        showLicenseAlert(error.message, () => resetToLogin?.());
+      } else {
+        Alert.alert('Error', error.message);
+      }
       setIsUnlocking(false);
     } finally {
       setLoading(false);
@@ -223,7 +274,11 @@ export default function DoorControlScreen({ route, navigation }) {
       setStatus('Secured');
     } catch (error) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message);
+      if (error.isLicenseExpired) {
+        showLicenseAlert(error.message, () => resetToLogin?.());
+      } else {
+        Alert.alert('Error', error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -277,7 +332,11 @@ export default function DoorControlScreen({ route, navigation }) {
       // Timeout
       setStatus('Timeout');
     } catch (error) {
-      Alert.alert('Error', error.message);
+      if (error.isLicenseExpired) {
+        showLicenseAlert(error.message, () => resetToLogin?.());
+      } else {
+        Alert.alert('Error', error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -440,6 +499,14 @@ export default function DoorControlScreen({ route, navigation }) {
           </Text>
         </View>
 
+        {licenseStatus?.status === 'GracePeriod' && licenseStatus?.grace_until && (
+          <View style={[styles.licenseBanner, { backgroundColor: colors.primaryDim, borderColor: colors.primary }]}>
+            <Text style={[styles.licenseBannerText, { color: colors.primary }]}>
+              Your license is valid until {formatGraceUntil(licenseStatus.grace_until)}. Contact sales@urzis.com to renew.
+            </Text>
+          </View>
+        )}
+
         {/* Actions */}
         <View style={[styles.actions, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
           <TouchableOpacity
@@ -461,7 +528,9 @@ export default function DoorControlScreen({ route, navigation }) {
             activeOpacity={0.7}
           >
             <Activity size={16} color={colors.textPrimary} strokeWidth={2.5} />
-            <Text style={[styles.actionText, { color: colors.textPrimary }]}>Status</Text>
+            <Text style={[styles.actionText, { color: colors.textPrimary }]}>
+              {licenseStatus?.status === 'GracePeriod' ? 'Door' : 'Status'}
+            </Text>
           </TouchableOpacity>
 
           <View style={[styles.actionDivider, { backgroundColor: colors.separator }]} />
@@ -601,5 +670,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     letterSpacing: -0.1,
+  },
+  licenseBanner: {
+    marginHorizontal: 0,
+    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+  },
+  licenseBannerText: {
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
