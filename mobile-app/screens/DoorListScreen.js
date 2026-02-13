@@ -170,7 +170,7 @@ export default function DoorListScreen({ navigation }) {
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <View style={[styles.emptyIcon, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
+      <View style={styles.emptyIcon}>
         <Shield size={28} color={colors.textTertiary} strokeWidth={1.5} />
       </View>
       <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No doors</Text>
@@ -368,11 +368,9 @@ const styles = StyleSheet.create({
   emptyIcon: {
     width: 64,
     height: 64,
-    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
-    borderWidth: 1,
   },
   emptyTitle: {
     fontSize: 18,

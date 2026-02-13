@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StatusBar, View, Animated, StyleSheet } from 'react-native';
+import { StatusBar, View, Animated, StyleSheet, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LayoutList, Plus, User, History } from 'lucide-react-native';
@@ -66,6 +66,14 @@ function SplashScreen({ onFinish }) {
       >
         <Logo width={280} variant="white" />
       </Animated.View>
+
+      <Animated.View style={[splashStyles.footer, { opacity: fadeAnim }]}>
+        <Image
+          source={require('./assets/urzis-logo.png')}
+          style={splashStyles.footerLogo}
+          resizeMode="contain"
+        />
+      </Animated.View>
     </View>
   );
 }
@@ -79,6 +87,19 @@ const splashStyles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 50,
+    alignItems: 'center',
+    width: '100%',
+  },
+  footerLogo: {
+    width: 120,
+    height: 40,
+    opacity: 0.8,
   },
 });
 

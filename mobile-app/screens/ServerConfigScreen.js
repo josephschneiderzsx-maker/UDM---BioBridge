@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Wifi } from 'lucide-react-native';
@@ -73,7 +74,7 @@ export default function ServerConfigScreen({ navigation }) {
           ]}
         >
           <View style={styles.header}>
-            <View style={[styles.iconContainer, { backgroundColor: colors.primaryDim }]}>
+            <View style={styles.iconContainer}>
               <Wifi size={28} color={colors.primary} strokeWidth={1.5} />
             </View>
             <Text style={[styles.title, { color: colors.textPrimary }]}>Connect</Text>
@@ -105,6 +106,13 @@ export default function ServerConfigScreen({ navigation }) {
               onPress={handleSave}
               loading={loading}
             />
+            <View style={styles.brandFooter}>
+              <Image
+                source={require('../assets/urzis-logo.png')}
+                style={styles.brandLogo}
+                resizeMode="contain"
+              />
+            </View>
           </View>
         </Animated.View>
       </KeyboardAvoidingView>
@@ -122,6 +130,8 @@ const styles = StyleSheet.create({
   },
   inner: {
     paddingHorizontal: spacing.xl,
+    flex: 1,
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
@@ -130,12 +140,9 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 64,
     height: 64,
-    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 170, 255, 0.12)',
   },
   title: {
     fontSize: 28,
@@ -158,5 +165,14 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: spacing.sm,
+    alignItems: 'center',
+  },
+  brandFooter: {
+    marginTop: 40,
+    opacity: 0.5,
+  },
+  brandLogo: {
+    width: 100,
+    height: 30,
   },
 });

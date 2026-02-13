@@ -91,7 +91,7 @@ export default function DoorCard({ door, onPress, onLongPress, index = 0 }) {
         onPressOut={handlePressOut}
         activeOpacity={1}
       >
-        <View style={[styles.iconContainer, { backgroundColor: colors.primaryDim }]}>
+        <View style={styles.iconContainer}>
           <Shield size={20} color={colors.primary} strokeWidth={2} />
         </View>
 

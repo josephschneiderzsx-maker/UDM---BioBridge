@@ -7,6 +7,8 @@
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
     "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
     "assetBundlePatterns": ["**/*"],
@@ -17,6 +19,11 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "splash": {
+        "image": "./assets/adaptive-icon.png",
+        "resizeMode": "contain",
         "backgroundColor": "#000000"
       },
       "package": "com.urzis.pass"

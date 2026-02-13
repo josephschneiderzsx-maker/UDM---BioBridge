@@ -214,7 +214,7 @@ export default function AccountScreen({ navigation }) {
               style={[styles.menuButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
               onPress={() => navigation.navigate('UsersList')}
             >
-              <View style={[styles.menuIconWrapper, { backgroundColor: colors.primaryDim }]}>
+              <View style={styles.menuIconWrapper}>
                 <Users size={18} color={colors.primary} strokeWidth={2} />
               </View>
               <Text style={[styles.menuText, { color: colors.textPrimary }]}>Manage Users</Text>
@@ -227,7 +227,7 @@ export default function AccountScreen({ navigation }) {
             style={[styles.menuButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
             onPress={handleLogout}
           >
-            <View style={[styles.menuIconWrapper, { backgroundColor: colors.dangerDim }]}>
+            <View style={styles.menuIconWrapper}>
               <LogOut size={18} color={colors.danger} strokeWidth={2} />
             </View>
             <Text style={[styles.menuText, { color: colors.danger }]}>Sign Out</Text>
