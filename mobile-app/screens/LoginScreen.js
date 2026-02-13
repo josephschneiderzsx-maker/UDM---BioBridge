@@ -15,6 +15,7 @@ import { Mail, Lock, Building2, ChevronLeft } from 'lucide-react-native';
 import api from '../services/api';
 import Input from '../components/Input';
 import PrimaryButton from '../components/PrimaryButton';
+import Logo from '../components/Logo';
 import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -65,7 +66,7 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
     try {
       await api.login(email.trim(), password, tenant.trim());
-      navigation.replace('DoorList');
+      navigation.replace('MainTabs');
     } catch (error) {
       Alert.alert('Sign In Failed', error.message);
     } finally {
@@ -101,9 +102,8 @@ export default function LoginScreen({ navigation }) {
             ]}
           >
             <View style={styles.header}>
-              <Text style={[styles.brandLabel, { color: colors.primary }]}>URZIS</Text>
-              <Text style={[styles.title, { color: colors.textPrimary }]}>PASS</Text>
-              <View style={[styles.divider, { backgroundColor: colors.primary }]} />
+              <Logo width={220} />
+              <View style={styles.logoSpacer} />
               <Text style={[styles.description, { color: colors.textSecondary }]}>
                 Sign in to manage your access
               </Text>
@@ -178,24 +178,8 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 40,
   },
-  brandLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: 4,
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  title: {
-    fontSize: 44,
-    fontWeight: '700',
-    letterSpacing: -1,
-    marginBottom: 16,
-  },
-  divider: {
-    width: 32,
-    height: 2,
-    borderRadius: 1,
-    marginBottom: 16,
+  logoSpacer: {
+    height: 20,
   },
   description: {
     fontSize: 16,

@@ -23,17 +23,22 @@ const HEADER_TOP_PADDING = Math.max(spacing.xl, SCREEN_HEIGHT * 0.02) + (Platfor
 export default function UsersListScreen({ navigation }) {
   const { colors } = useTheme();
   const [users, setUsers] = useState([]);
+  const [userQuota, setUserQuota] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadUsers();
+    loadUserQuota();
     Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
   }, []);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => loadUsers());
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadUsers();
+      loadUserQuota();
+    });
     return unsubscribe;
   }, [navigation]);
 
@@ -47,6 +52,15 @@ export default function UsersListScreen({ navigation }) {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const loadUserQuota = async () => {
+    try {
+      const quotaData = await api.getUsersQuota();
+      setUserQuota(quotaData);
+    } catch {
+      setUserQuota(null);
     }
   };
 
@@ -151,10 +165,25 @@ export default function UsersListScreen({ navigation }) {
           <TouchableOpacity
             style={[styles.addButton, { backgroundColor: colors.primaryDim }]}
             onPress={() => navigation.navigate('CreateUser')}
+            disabled={userQuota && userQuota.remaining <= 0}
           >
             <Plus size={16} color={colors.primary} strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
+        {userQuota && (
+          <View style={styles.statsRow}>
+            <View style={[styles.statPill, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
+              <Text style={[styles.statValue, { color: colors.textPrimary }]}>{users.length}</Text>
+              <Text style={[styles.statLabel, { color: colors.textTertiary }]}>
+                {users.length === 1 ? 'user' : 'users'}
+              </Text>
+            </View>
+            <View style={[styles.statPill, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
+              <Text style={[styles.statValue, { color: colors.textPrimary }]}>{userQuota.used}/{userQuota.quota}</Text>
+              <Text style={[styles.statLabel, { color: colors.textTertiary }]}>quota</Text>
+            </View>
+          </View>
+        )}
 
         <FlatList
           data={users}
@@ -165,7 +194,7 @@ export default function UsersListScreen({ navigation }) {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => { setRefreshing(true); loadUsers(); }}
+              onRefresh={() => { setRefreshing(true); loadUsers(); loadUserQuota(); }}
               tintColor={colors.primary}
               colors={[colors.primary]}
             />
@@ -193,18 +222,43 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.xl,
     paddingTop: HEADER_TOP_PADDING,
+    paddingBottom: spacing.sm,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: spacing.xl,
     paddingBottom: spacing.md,
   },
+  statPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  statValue: { fontSize: 13, fontWeight: '700' },
+  statLabel: { fontSize: 13 },
   backButton: {
     width: 36, height: 36, borderRadius: 10,
     justifyContent: 'center', alignItems: 'center', borderWidth: 1,
   },
   title: { fontSize: 18, fontWeight: '600', letterSpacing: -0.3 },
+  quotaLabel: { fontSize: 12, marginTop: 2 },
   addButton: {
     width: 36, height: 36, borderRadius: 10,
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, borderColor: 'rgba(0, 170, 255, 0.15)',
   },
+  statsRow: { flexDirection: 'row', gap: 8 },
+  statPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1,
+  },
+  statValue: { fontSize: 13, fontWeight: '700' },
+  statLabel: { fontSize: 13 },
   listContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.xxxl },
   userCard: {
     flexDirection: 'row', alignItems: 'center',

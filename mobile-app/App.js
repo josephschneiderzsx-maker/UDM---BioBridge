@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
-import { StatusBar, View, Animated, StyleSheet, Text } from 'react-native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { StatusBar, View, Animated, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { LayoutList, Plus, User, History } from 'lucide-react-native';
+import Logo from './components/Logo';
+import { RootNavigationProvider } from './contexts/RootNavigationContext';
 import ServerConfigScreen from './screens/ServerConfigScreen';
 import LoginScreen from './screens/LoginScreen';
 import DoorListScreen from './screens/DoorListScreen';
@@ -15,67 +19,40 @@ import UsersListScreen from './screens/UsersListScreen';
 import CreateUserScreen from './screens/CreateUserScreen';
 import UserPermissionsScreen from './screens/UserPermissionsScreen';
 import ActivityLogScreen from './screens/ActivityLogScreen';
-import { colors } from './constants/theme';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 
 const Stack = createStackNavigator();
+const Tab = createBottomTabNavigator();
 
 function SplashScreen({ onFinish }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.85)).current;
-  const lineWidth = useRef(new Animated.Value(0)).current;
-  const subtitleFade = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.88)).current;
 
   useEffect(() => {
-    // Logo entrance
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 500,
+        duration: 600,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
-        tension: 40,
-        friction: 7,
+        tension: 50,
+        friction: 8,
         useNativeDriver: true,
       }),
     ]).start();
 
-    // Line accent animation
-    setTimeout(() => {
-      Animated.timing(lineWidth, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: false,
-      }).start();
-    }, 300);
-
-    // Subtitle fade
-    setTimeout(() => {
-      Animated.timing(subtitleFade, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }).start();
-    }, 500);
-
-    // Exit
     const timer = setTimeout(() => {
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 250,
+        duration: 300,
         useNativeDriver: true,
       }).start(() => onFinish());
-    }, 2000);
+    }, 2200);
 
     return () => clearTimeout(timer);
   }, []);
-
-  const animatedWidth = lineWidth.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 40],
-  });
 
   return (
     <View style={splashStyles.container}>
@@ -88,23 +65,7 @@ function SplashScreen({ onFinish }) {
           },
         ]}
       >
-        <View style={splashStyles.logoMark}>
-          <View style={splashStyles.logoShield}>
-            <View style={splashStyles.logoShieldInner} />
-          </View>
-        </View>
-
-        <Text style={splashStyles.brand}>URZIS</Text>
-
-        <Animated.View
-          style={[splashStyles.accentLine, { width: animatedWidth }]}
-        />
-
-        <Animated.Text
-          style={[splashStyles.product, { opacity: subtitleFade }]}
-        >
-          PASS
-        </Animated.Text>
+        <Logo width={280} variant="white" />
       </Animated.View>
     </View>
   );
@@ -120,57 +81,129 @@ const splashStyles = StyleSheet.create({
   content: {
     alignItems: 'center',
   },
-  logoMark: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 170, 255, 0.08)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 170, 255, 0.15)',
-  },
-  logoShield: {
-    width: 30,
-    height: 36,
-    borderRadius: 6,
-    borderWidth: 2.5,
-    borderColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoShieldInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-  },
-  brand: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 8,
-    marginBottom: 8,
-  },
-  accentLine: {
-    height: 2,
-    backgroundColor: colors.primary,
-    borderRadius: 1,
-    marginBottom: 8,
-  },
-  product: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.textSecondary,
-    letterSpacing: 6,
-  },
 });
+
+const stackScreenOptions = (colors) => ({
+  headerShown: false,
+  cardStyle: { backgroundColor: colors.background },
+  gestureEnabled: true,
+  ...TransitionPresets.SlideFromRightIOS,
+});
+
+function StatusStack() {
+  const { colors } = useTheme();
+  return (
+    <Stack.Navigator screenOptions={stackScreenOptions(colors)}>
+      <Stack.Screen name="DoorList" component={DoorListScreen} />
+      <Stack.Screen
+        name="DoorControl"
+        component={DoorControlScreen}
+        options={{
+          ...TransitionPresets.ModalSlideFromBottomIOS,
+          gestureEnabled: true,
+        }}
+      />
+      <Stack.Screen name="EditDoor" component={EditDoorScreen} />
+      <Stack.Screen name="ActivityLog" component={ActivityLogScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function AddDoorStack() {
+  const { colors } = useTheme();
+  return (
+    <Stack.Navigator screenOptions={stackScreenOptions(colors)}>
+      <Stack.Screen name="AddDoor" component={AddDoorScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function HistoryStack() {
+  const { colors } = useTheme();
+  return (
+    <Stack.Navigator screenOptions={stackScreenOptions(colors)}>
+      <Stack.Screen name="ActivityLog" component={ActivityLogScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function AccountStack() {
+  const { colors } = useTheme();
+  return (
+    <Stack.Navigator screenOptions={stackScreenOptions(colors)}>
+      <Stack.Screen name="Account" component={AccountScreen} />
+      <Stack.Screen name="UsersList" component={UsersListScreen} />
+      <Stack.Screen name="CreateUser" component={CreateUserScreen} />
+      <Stack.Screen name="UserPermissions" component={UserPermissionsScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function MainTabs() {
+  const { colors } = useTheme();
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.separator,
+          borderTopWidth: 1,
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textTertiary,
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '500' },
+      }}
+    >
+      <Tab.Screen
+        name="StatusTab"
+        component={StatusStack}
+        options={{
+          title: 'Status',
+          tabBarIcon: ({ color, size }) => (
+            <LayoutList size={size || 22} color={color} strokeWidth={2} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="AddDoorTab"
+        component={AddDoorStack}
+        options={{
+          title: 'Add new door',
+          tabBarIcon: ({ color, size }) => (
+            <Plus size={size || 22} color={color} strokeWidth={2.5} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="HistoryTab"
+        component={HistoryStack}
+        options={{
+          title: 'History',
+          tabBarIcon: ({ color, size }) => (
+            <History size={size || 22} color={color} strokeWidth={2} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="AccountTab"
+        component={AccountStack}
+        options={{
+          title: 'Account',
+          tabBarIcon: ({ color, size }) => (
+            <User size={size || 22} color={color} strokeWidth={2} />
+          ),
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
 
 function AppNavigator() {
   const { colors, isDark } = useTheme();
   const [initialRoute, setInitialRoute] = useState(null);
   const [showSplash, setShowSplash] = useState(true);
+  const navigationRef = useRef(null);
 
   useEffect(() => {
     checkInitialState();
@@ -187,7 +220,7 @@ function AppNavigator() {
       } else if (!token || !tenant) {
         setInitialRoute('Login');
       } else {
-        setInitialRoute('DoorList');
+        setInitialRoute('MainTabs');
       }
     } catch (error) {
       setInitialRoute('ServerConfig');
@@ -208,97 +241,36 @@ function AppNavigator() {
         barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      <NavigationContainer
-        theme={{
-          dark: isDark,
-          colors: {
-            primary: colors.primary,
-            background: colors.background,
-            card: colors.surface,
-            text: colors.textPrimary,
-            border: colors.separator,
-            notification: colors.primary,
-          },
-        }}
-      >
-        <Stack.Navigator
-          initialRouteName={initialRoute}
-          screenOptions={{
-            headerShown: false,
-            cardStyle: { backgroundColor: colors.background },
-            gestureEnabled: true,
-            ...TransitionPresets.SlideFromRightIOS,
+      <RootNavigationProvider refValue={navigationRef}>
+        <NavigationContainer
+          ref={navigationRef}
+          theme={{
+            dark: isDark,
+            colors: {
+              primary: colors.primary,
+              background: colors.background,
+              card: colors.surface,
+              text: colors.textPrimary,
+              border: colors.separator,
+              notification: colors.primary,
+            },
           }}
         >
-          <Stack.Screen name="ServerConfig" component={ServerConfigScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="DoorList" component={DoorListScreen} />
-          <Stack.Screen
-            name="DoorControl"
-            component={DoorControlScreen}
-            options={{
-              ...TransitionPresets.ModalSlideFromBottomIOS,
+          <Stack.Navigator
+            initialRouteName={initialRoute}
+            screenOptions={{
+              headerShown: false,
+              cardStyle: { backgroundColor: colors.background },
               gestureEnabled: true,
-            }}
-          />
-          <Stack.Screen
-            name="AddDoor"
-            component={AddDoorScreen}
-            options={{
               ...TransitionPresets.SlideFromRightIOS,
-              gestureEnabled: true,
             }}
-          />
-          <Stack.Screen
-            name="EditDoor"
-            component={EditDoorScreen}
-            options={{
-              ...TransitionPresets.SlideFromRightIOS,
-              gestureEnabled: true,
-            }}
-          />
-          <Stack.Screen
-            name="Account"
-            component={AccountScreen}
-            options={{
-              ...TransitionPresets.SlideFromRightIOS,
-              gestureEnabled: true,
-            }}
-          />
-          <Stack.Screen
-            name="UsersList"
-            component={UsersListScreen}
-            options={{
-              ...TransitionPresets.SlideFromRightIOS,
-              gestureEnabled: true,
-            }}
-          />
-          <Stack.Screen
-            name="CreateUser"
-            component={CreateUserScreen}
-            options={{
-              ...TransitionPresets.SlideFromRightIOS,
-              gestureEnabled: true,
-            }}
-          />
-          <Stack.Screen
-            name="UserPermissions"
-            component={UserPermissionsScreen}
-            options={{
-              ...TransitionPresets.SlideFromRightIOS,
-              gestureEnabled: true,
-            }}
-          />
-          <Stack.Screen
-            name="ActivityLog"
-            component={ActivityLogScreen}
-            options={{
-              ...TransitionPresets.SlideFromRightIOS,
-              gestureEnabled: true,
-            }}
-          />
-        </Stack.Navigator>
-      </NavigationContainer>
+          >
+            <Stack.Screen name="ServerConfig" component={ServerConfigScreen} />
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="MainTabs" component={MainTabs} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </RootNavigationProvider>
     </>
   );
 }

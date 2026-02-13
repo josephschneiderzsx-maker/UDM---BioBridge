@@ -17,6 +17,7 @@ import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
+import Logo from '../components/Logo';
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BUTTON_SIZE = Math.min(width * 0.45, 180);
@@ -335,7 +336,7 @@ export default function DoorControlScreen({ route, navigation }) {
 
         {/* Door Info */}
         <View style={styles.doorInfo}>
-          <Text style={[styles.doorLabel, { color: colors.primary }]}>URZIS PASS</Text>
+          <Logo width={120} />
           <Text style={[styles.doorName, { color: colors.textPrimary }]}>{door.name}</Text>
           <Text style={[styles.doorAddress, { color: colors.textTertiary }]}>
             {door.terminal_ip}:{door.terminal_port}
@@ -511,13 +512,6 @@ const styles = StyleSheet.create({
   doorInfo: {
     alignItems: 'center',
     marginBottom: spacing.lg,
-  },
-  doorLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 3,
-    textTransform: 'uppercase',
-    marginBottom: 8,
   },
   doorName: {
     fontSize: 24,

@@ -265,6 +265,31 @@ class ApiService {
     return data;
   }
 
+  async getUsersQuota() {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) {
+      throw new Error('Not authenticated');
+    }
+    const url = `${this.baseUrl}/${this.tenant}/users-quota`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!response.ok) {
+      if (response.status === 401) {
+        await this.clearAuth();
+        throw new Error('Session expired');
+      }
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to get users quota');
+    }
+    const data = await response.json();
+    return data;
+  }
+
   async createDoor(doorData) {
     await this.initialize();
     if (!this.baseUrl || !this.token || !this.tenant) {

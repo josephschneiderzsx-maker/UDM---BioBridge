@@ -109,6 +109,28 @@ Public Class DatabaseHelper
         End Using
     End Function
 
+    Public Function GetEnterpriseUserQuota(enterpriseId As Integer) As Integer
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand("SELECT user_quota FROM enterprises WHERE id = @id", conn)
+                cmd.Parameters.AddWithValue("@id", enterpriseId)
+                Dim result = cmd.ExecuteScalar()
+                If result Is Nothing OrElse result Is DBNull.Value Then
+                    Return 20 ' Default
+                End If
+                Return CInt(result)
+            End Using
+        End Using
+    End Function
+
+    Public Function GetActiveUserCount(enterpriseId As Integer) As Integer
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand("SELECT COUNT(*) FROM users WHERE enterprise_id = @id AND is_active = 1", conn)
+                cmd.Parameters.AddWithValue("@id", enterpriseId)
+                Return CInt(cmd.ExecuteScalar())
+            End Using
+        End Using
+    End Function
+
     Public Function CreateDoor(enterpriseId As Integer, agentId As Integer, name As String, terminalIp As String, terminalPort As Integer, defaultDelay As Integer) As Integer
         Using conn = GetConnection()
             Using cmd = New MySqlCommand("INSERT INTO doors (enterprise_id, agent_id, name, terminal_ip, terminal_port, default_delay) VALUES (@ent, @agent, @name, @ip, @port, @delay)", conn)

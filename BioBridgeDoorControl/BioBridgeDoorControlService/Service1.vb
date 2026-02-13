@@ -302,6 +302,12 @@ Public Class Service1
                 Return
             End If
 
+            ' /{tenant}/users-quota
+            If segments.Length = 2 AndAlso segments(1) = "users-quota" AndAlso request.HttpMethod = "GET" Then
+                HandleUsersQuotaRequest(context, principal, enterpriseId)
+                Return
+            End If
+
             ' /{tenant}/agents
             If segments.Length = 2 AndAlso segments(1) = "agents" AndAlso request.HttpMethod = "GET" Then
                 HandleAgentsRequest(context, principal, enterpriseId)
@@ -461,6 +467,16 @@ Public Class Service1
         Dim response = context.Response
         Dim quota As Integer = db.GetEnterpriseQuota(enterpriseId)
         Dim currentCount As Integer = db.GetActiveDoorCount(enterpriseId)
+        Dim remaining As Integer = Math.Max(0, quota - currentCount)
+        
+        response.StatusCode = 200
+        SendJsonResponse(response, "{""quota"":" & quota & ",""used"":" & currentCount & ",""remaining"":" & remaining & "}")
+    End Sub
+
+    Private Sub HandleUsersQuotaRequest(context As HttpListenerContext, principal As ClaimsPrincipal, enterpriseId As Integer)
+        Dim response = context.Response
+        Dim quota As Integer = db.GetEnterpriseUserQuota(enterpriseId)
+        Dim currentCount As Integer = db.GetActiveUserCount(enterpriseId)
         Dim remaining As Integer = Math.Max(0, quota - currentCount)
         
         response.StatusCode = 200

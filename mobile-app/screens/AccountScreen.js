@@ -17,12 +17,14 @@ import Input from '../components/Input';
 import PrimaryButton from '../components/PrimaryButton';
 import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useRootNavigation } from '../contexts/RootNavigationContext';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HEADER_TOP_PADDING = Math.max(spacing.xl, SCREEN_HEIGHT * 0.02) + (Platform.OS === 'android' ? 10 : 0);
 
 export default function AccountScreen({ navigation }) {
   const { colors } = useTheme();
+  const { resetToLogin } = useRootNavigation();
   const [profile, setProfile] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -107,7 +109,7 @@ export default function AccountScreen({ navigation }) {
         style: 'destructive',
         onPress: async () => {
           await api.clearAuth();
-          navigation.replace('Login');
+          resetToLogin();
         },
       },
     ]);

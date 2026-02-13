@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(dir:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(findstr:*)",
+      "Bash(cd:*)",
+      "Bash(npm ls:*)",
+      "Bash(where:*)",
+      "Bash(\"C:\\\\Program Files\\\\Inkscape\\\\bin\\\\inkscape.exe\" \"U:\\\\D-biobridgeSDKservice\\\\icon.svg\" --export-type=png --export-filename=\"U:\\\\D-biobridgeSDKservice\\\\mobile-app\\\\assets\\\\icon.png\" --export-width=1024 --export-height=1024)",
+      "Bash(\"C:\\\\Program Files\\\\Inkscape\\\\bin\\\\inkscape.exe\" \"U:\\\\D-biobridgeSDKservice\\\\icon.svg\" --export-type=png --export-filename=\"U:\\\\D-biobridgeSDKservice\\\\mobile-app\\\\assets\\\\adaptive-icon.png\" --export-width=1024 --export-height=1024)",
+      "Bash(copy \"U:\\\\D-biobridgeSDKservice\\\\pass-black.svg\" \"U:\\\\D-biobridgeSDKservice\\\\mobile-app\\\\assets\\\\pass-black.svg\")",
+      "Bash(copy \"U:\\\\D-biobridgeSDKservice\\\\pass-white.svg\" \"U:\\\\D-biobridgeSDKservice\\\\mobile-app\\\\assets\\\\pass-white.svg\")",
+      "Bash(\"C:\\\\Program Files\\\\Inkscape\\\\bin\\\\inkscape.exe\" \"U:\\\\D-biobridgeSDKservice\\\\pass-white.svg\" --export-type=png --export-filename=\"U:\\\\D-biobridgeSDKservice\\\\mobile-app\\\\assets\\\\splash.png\" --export-width=1302 --export-height=297)"
+    ]
+  }
+}

@@ -33,12 +33,23 @@ export default function CreateUserScreen({ route, navigation }) {
   const [lastName, setLastName] = useState(editUser?.last_name || '');
   const [isAdmin, setIsAdmin] = useState(editUser?.is_admin || false);
   const [saving, setSaving] = useState(false);
+  const [userQuota, setUserQuota] = useState(null);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (!isEditMode) {
+      api.getUsersQuota().then(setUserQuota).catch(() => {});
+    }
     Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
-  }, []);
+  }, [isEditMode]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (!isEditMode) api.getUsersQuota().then(setUserQuota).catch(() => {});
+    });
+    return unsubscribe;
+  }, [navigation, isEditMode]);
 
   const handleSave = async () => {
     if (!firstName.trim() || !lastName.trim()) {
@@ -47,6 +58,13 @@ export default function CreateUserScreen({ route, navigation }) {
     }
 
     if (!isEditMode) {
+      if (userQuota && userQuota.remaining <= 0) {
+        Alert.alert(
+          'Limit Reached',
+          `You have reached your limit of ${userQuota.quota} users. Please contact your administrator to increase your quota.`
+        );
+        return;
+      }
       if (!email.trim() || !password.trim()) {
         Alert.alert('Error', 'Email and password are required');
         return;
@@ -109,6 +127,38 @@ export default function CreateUserScreen({ route, navigation }) {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {!isEditMode && userQuota && (
+            <View style={[styles.quotaCard, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
+              <View style={styles.quotaRow}>
+                <Text style={[styles.quotaLabel, { color: colors.textSecondary }]}>User Quota</Text>
+                <Text
+                  style={[
+                    styles.quotaValue,
+                    { color: colors.textPrimary },
+                    userQuota.remaining === 0 && { color: colors.danger },
+                  ]}
+                >
+                  {userQuota.used} / {userQuota.quota}
+                </Text>
+              </View>
+              <View style={[styles.quotaBar, { backgroundColor: colors.fillTertiary }]}>
+                <View
+                  style={[
+                    styles.quotaFill,
+                    {
+                      width: `${(userQuota.used / userQuota.quota) * 100}%`,
+                      backgroundColor: userQuota.remaining === 0 ? colors.danger : colors.primary,
+                    },
+                  ]}
+                />
+              </View>
+              {userQuota.remaining === 0 && (
+                <Text style={[styles.quotaWarning, { color: colors.danger }]}>
+                  Cannot create more users. Quota limit reached.
+                </Text>
+              )}
+            </View>
+          )}
           {!isEditMode && (
             <>
               <Input
@@ -165,6 +215,7 @@ export default function CreateUserScreen({ route, navigation }) {
             title={isEditMode ? 'Save Changes' : 'Create User'}
             onPress={handleSave}
             loading={saving}
+            disabled={!isEditMode && userQuota && userQuota.remaining <= 0}
           />
 
           <View style={{ height: spacing.xxxl }} />
@@ -189,6 +240,15 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: spacing.xl, paddingTop: spacing.sm,
   },
+  quotaCard: {
+    borderRadius: borderRadius.lg, padding: spacing.lg, marginBottom: spacing.md, borderWidth: 1,
+  },
+  quotaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  quotaLabel: { fontSize: 14 },
+  quotaValue: { fontSize: 14, fontWeight: '700' },
+  quotaBar: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  quotaFill: { height: '100%', borderRadius: 3 },
+  quotaWarning: { fontSize: 12, marginTop: 6 },
   toggleRow: {
     flexDirection: 'row', alignItems: 'center',
     borderRadius: borderRadius.lg, padding: spacing.lg,

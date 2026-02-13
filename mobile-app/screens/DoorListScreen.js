@@ -12,19 +12,22 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { User, Plus, Shield, Sun, Moon, Clock } from 'lucide-react-native';
+import { Shield, Sun, Moon, Clock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import api from '../services/api';
 import DoorCard from '../components/DoorCard';
 import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useRootNavigation } from '../contexts/RootNavigationContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Logo from '../components/Logo';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HEADER_TOP_PADDING = Math.max(spacing.xl, SCREEN_HEIGHT * 0.02) + (Platform.OS === 'android' ? 10 : 0);
 
 export default function DoorListScreen({ navigation }) {
   const { colors, isDark, toggleTheme } = useTheme();
+  const { resetToLogin } = useRootNavigation();
   const [doors, setDoors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -93,7 +96,7 @@ export default function DoorListScreen({ navigation }) {
           text: 'OK',
           onPress: () => {
             if (error.message === 'Session expired') {
-              navigation.replace('Login');
+              resetToLogin();
             }
           },
         },
@@ -157,14 +160,6 @@ export default function DoorListScreen({ navigation }) {
     );
   };
 
-  const handleAddDoor = () => {
-    navigation.navigate('AddDoor');
-  };
-
-  const handleAccount = () => {
-    navigation.navigate('Account');
-  };
-
   const handleActivityLog = () => {
     navigation.navigate('ActivityLog');
   };
@@ -210,7 +205,7 @@ export default function DoorListScreen({ navigation }) {
         >
           <View style={styles.headerTop}>
             <View>
-              <Text style={[styles.brandLabel, { color: colors.primary }]}>URZIS PASS</Text>
+              <Logo width={130} />
               <Text style={[styles.greeting, { color: colors.textPrimary }]}>Doors</Text>
             </View>
             <View style={styles.headerActions}>
@@ -227,15 +222,6 @@ export default function DoorListScreen({ navigation }) {
               </TouchableOpacity>
               {isAdmin && (
                 <TouchableOpacity
-                  style={[styles.addButton, { backgroundColor: colors.primaryDim }]}
-                  onPress={handleAddDoor}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Plus size={16} color={colors.primary} strokeWidth={2.5} />
-                </TouchableOpacity>
-              )}
-              {isAdmin && (
-                <TouchableOpacity
                   style={[styles.themeButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
                   onPress={handleActivityLog}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -243,13 +229,6 @@ export default function DoorListScreen({ navigation }) {
                   <Clock size={16} color={colors.textSecondary} strokeWidth={2.5} />
                 </TouchableOpacity>
               )}
-              <TouchableOpacity
-                style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-                onPress={handleAccount}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <User size={16} color={colors.textSecondary} strokeWidth={2.5} />
-              </TouchableOpacity>
             </View>
           </View>
 
@@ -322,13 +301,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 16,
   },
-  brandLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
   greeting: {
     fontSize: 32,
     fontWeight: '700',
@@ -341,23 +313,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   themeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 170, 255, 0.15)',
-  },
-  logoutButton: {
     width: 36,
     height: 36,
     borderRadius: 10,

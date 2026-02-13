@@ -105,7 +105,7 @@ export default function AddDoorScreen({ navigation }) {
         {
           text: 'OK',
           onPress: () => {
-            navigation.goBack();
+            navigation.getParent()?.navigate('StatusTab');
           },
         },
       ]);
@@ -135,7 +135,7 @@ export default function AddDoorScreen({ navigation }) {
           <View style={styles.header}>
             <TouchableOpacity
               style={[styles.closeButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-              onPress={() => navigation.goBack()}
+              onPress={() => navigation.getParent()?.navigate('StatusTab')}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <X size={18} color={colors.textSecondary} strokeWidth={2.5} />
