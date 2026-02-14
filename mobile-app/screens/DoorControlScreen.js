@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Haptics from 'expo-haptics';
-import { X, Activity, ChevronDown, Fingerprint, Lock, Unlock, Clock } from 'lucide-react-native';
+import { X, Activity, ChevronDown, Fingerprint, Lock, Unlock, Clock, Bell, BellOff } from 'lucide-react-native';
 import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import { spacing, borderRadius } from '../constants/theme';
@@ -50,6 +50,8 @@ export default function DoorControlScreen({ route, navigation }) {
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [licenseStatus, setLicenseStatus] = useState(null);
+  const [notifyEnabled, setNotifyEnabled] = useState(false);
+  const [notifyLoading, setNotifyLoading] = useState(false);
 
   const scaleAnim = useRef(new Animated.Value(0.96)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -112,7 +114,17 @@ export default function DoorControlScreen({ route, navigation }) {
         setLicenseStatus(null);
       }
     };
+    const loadNotificationPref = async () => {
+      try {
+        const prefs = await api.getNotificationPreferences();
+        const pref = prefs.find(p => p.door_id === door.id);
+        setNotifyEnabled(pref ? (pref.notify_on_open || pref.notify_on_close || pref.notify_on_forced) : false);
+      } catch {
+        setNotifyEnabled(false);
+      }
+    };
     loadLicenseStatus();
+    loadNotificationPref();
   }, []);
 
   useEffect(() => {
@@ -346,6 +358,20 @@ export default function DoorControlScreen({ route, navigation }) {
     }
   };
 
+  const toggleNotifications = async () => {
+    setNotifyLoading(true);
+    try {
+      const newState = !notifyEnabled;
+      await api.setNotificationPreference(door.id, newState, newState, newState);
+      setNotifyEnabled(newState);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    } finally {
+      setNotifyLoading(false);
+    }
+  };
+
   const isUnlocked = status.toLowerCase() === 'unlocked' || status.toLowerCase() === 'open';
 
   const ringScale = ringAnim.interpolate({
@@ -547,6 +573,24 @@ export default function DoorControlScreen({ route, navigation }) {
           >
             <Clock size={16} color={colors.textPrimary} strokeWidth={2.5} />
             <Text style={[styles.actionText, { color: colors.textPrimary }]}>History</Text>
+          </TouchableOpacity>
+
+          <View style={[styles.actionDivider, { backgroundColor: colors.separator }]} />
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={toggleNotifications}
+            disabled={notifyLoading}
+            activeOpacity={0.7}
+          >
+            {notifyEnabled ? (
+              <Bell size={16} color={colors.primary} strokeWidth={2.5} />
+            ) : (
+              <BellOff size={16} color={colors.textTertiary} strokeWidth={2.5} />
+            )}
+            <Text style={[styles.actionText, { color: notifyEnabled ? colors.primary : colors.textTertiary }]}>
+              {notifyEnabled ? 'Notify' : 'Notify'}
+            </Text>
           </TouchableOpacity>
         </View>
       </Animated.View>

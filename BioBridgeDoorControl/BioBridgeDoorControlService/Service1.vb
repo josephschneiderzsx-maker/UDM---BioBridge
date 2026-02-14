@@ -879,12 +879,12 @@ Public Class Service1
             first = False
             json.Append("{""id"":").Append(ev.Id)
             json.Append(",""door_id"":").Append(ev.DoorId)
-            json.Append(",""door_name"":""").Append(ev.DoorName.Replace("""", "\""")).Append("""")
-            json.Append(",""event_type"":""").Append(ev.EventType.Replace("""", "\""")).Append("""")
+            json.Append(",""door_name"":""").Append(EscapeJsonString(ev.DoorName)).Append("""")
+            json.Append(",""event_type"":""").Append(EscapeJsonString(ev.EventType)).Append("""")
             If Not String.IsNullOrEmpty(ev.EventData) Then
-                json.Append(",""event_data"":""").Append(ev.EventData.Replace("""", "\""")).Append("""")
+                json.Append(",""event_data"":""").Append(EscapeJsonString(ev.EventData)).Append("""")
             End If
-            json.Append(",""source"":""").Append(ev.Source).Append("""")
+            json.Append(",""source"":""").Append(EscapeJsonString(ev.Source)).Append("""")
             json.Append(",""created_at"":""").Append(ev.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")).Append("""")
             json.Append("}")
         Next
@@ -1885,13 +1885,13 @@ Public Class Service1
         CreateLog("Agent ingress events - Body: " & body)
 
         ' Get enterprise_id for this agent
-        Dim enterpriseIdOpt = db.GetEnterpriseIdForAgent(agentId)
+        Dim enterpriseIdOpt As Integer? = db.GetEnterpriseIdForAgent(agentId)
         If Not enterpriseIdOpt.HasValue Then
             response.StatusCode = 400
             SendJsonResponse(response, "{""error"":""Unknown agent""}")
             Return
         End If
-        Dim enterpriseId = enterpriseIdOpt.Value
+        Dim enterpriseId As Integer = enterpriseIdOpt.Value
 
         ' Parse events array: {"events":[{"ingress_id":1,"event_type":"door_open","event_time":"...","device_ip":"...","description":"..."},...]}
         Dim inserted As Integer = 0
@@ -1914,7 +1914,7 @@ Public Class Service1
 
                 If Not String.IsNullOrEmpty(deviceIp) Then
                     ' Map device_ip to door_id
-                    Dim doorIdOpt = db.GetDoorIdByTerminalIP(enterpriseId, deviceIp)
+                    Dim doorIdOpt As Integer? = db.GetDoorIdByTerminalIP(enterpriseId, deviceIp)
                     If doorIdOpt.HasValue Then
                         Dim ingressId As Integer? = Nothing
                         If Not String.IsNullOrEmpty(ingressIdStr) Then
@@ -2025,17 +2025,17 @@ Public Class Service1
         CreateLog("Agent discovered-doors - Body: " & body)
 
         ' Get enterprise_id for this agent
-        Dim enterpriseIdOpt = db.GetEnterpriseIdForAgent(agentId)
+        Dim enterpriseIdOpt As Integer? = db.GetEnterpriseIdForAgent(agentId)
         If Not enterpriseIdOpt.HasValue Then
             response.StatusCode = 400
             SendJsonResponse(response, "{""error"":""Unknown agent""}")
             Return
         End If
-        Dim enterpriseId = enterpriseIdOpt.Value
+        Dim enterpriseId As Integer = enterpriseIdOpt.Value
 
         ' Check door quota
-        Dim currentCount = db.GetActiveDoorCount(enterpriseId)
-        Dim maxQuota = db.GetEnterpriseQuota(enterpriseId)
+        Dim currentCount As Integer = db.GetActiveDoorCount(enterpriseId)
+        Dim maxQuota As Integer = db.GetEnterpriseQuota(enterpriseId)
 
         ' Parse doors array: {"doors":[{"name":"...","terminal_ip":"...","terminal_port":4370},...]}
         Dim created As Integer = 0
@@ -2062,7 +2062,7 @@ Public Class Service1
 
                 If Not String.IsNullOrEmpty(terminalIp) Then
                     ' Check if already exists as a door
-                    Dim existingDoorId = db.GetDoorIdByTerminalIP(enterpriseId, terminalIp)
+                    Dim existingDoorId As Integer? = db.GetDoorIdByTerminalIP(enterpriseId, terminalIp)
                     If existingDoorId.HasValue Then
                         existing += 1
                     Else
@@ -2109,9 +2109,14 @@ Public Class Service1
 
     Private Sub SendError(response As HttpListenerResponse, errorMessage As String)
         response.StatusCode = 500
-        Dim errorResponse As String = "{""success"":false,""error"":""" & errorMessage & """}"
+        Dim errorResponse As String = "{""success"":false,""error"":""" & EscapeJsonString(errorMessage) & """}"
         SendJsonResponse(response, errorResponse)
     End Sub
+
+    Private Function EscapeJsonString(s As String) As String
+        If String.IsNullOrEmpty(s) Then Return ""
+        Return s.Replace("\", "\\").Replace("""", "\""").Replace(vbCr, "\r").Replace(vbLf, "\n").Replace(vbTab, "\t")
+    End Function
 
     Private Sub SendNotFound(response As HttpListenerResponse)
         response.StatusCode = 404
