@@ -272,6 +272,7 @@ export default function DoorControlScreen({ route, navigation }) {
       await api.closeDoor(door.id);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setStatus('Secured');
+      Alert.alert('Locked', 'Door has been locked successfully.');
     } catch (error) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       if (error.isLicenseExpired) {
@@ -317,7 +318,10 @@ export default function DoorControlScreen({ route, navigation }) {
                 doorStatus = cmdResult.result;
               }
             }
-            setStatus(doorStatus === 'connected' ? 'Secured' : doorStatus.charAt(0).toUpperCase() + doorStatus.slice(1));
+            const displayStatus = doorStatus === 'connected' ? 'Secured' : doorStatus.charAt(0).toUpperCase() + doorStatus.slice(1);
+            setStatus(displayStatus);
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert('Door Status', `Current status: ${displayStatus}`);
             return;
           } else if (cmdResult.status === 'failed') {
             Alert.alert('Error', cmdResult.error_message || 'Status check failed');

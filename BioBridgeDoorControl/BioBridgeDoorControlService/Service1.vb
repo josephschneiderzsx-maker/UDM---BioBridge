@@ -362,6 +362,12 @@ Public Class Service1
                 End If
             End If
 
+            ' /{tenant}/discovered-devices...
+            If segments.Length >= 2 AndAlso segments(1) = "discovered-devices" Then
+                HandleDiscoveredDeviceRoutes(context, principal, enterpriseId, segments)
+                Return
+            End If
+
             ' /{tenant}/doors...
             If segments.Length >= 2 AndAlso segments(1) = "doors" Then
                 HandleDoorRoutes(context, principal, enterpriseId, segments)
@@ -1607,6 +1613,12 @@ Public Class Service1
                 Else
                     SendNotFound(response)
                 End If
+            Case "discovered-doors"
+                If request.HttpMethod = "POST" Then
+                    HandleAgentDiscoveredDoors(context, agentId)
+                Else
+                    SendNotFound(response)
+                End If
             Case Else
                 SendNotFound(response)
         End Select
@@ -1808,9 +1820,31 @@ Public Class Service1
         If success Then
             commandQueue.MarkAsCompleted(cmdId, If(String.IsNullOrEmpty(result), "{}", result))
             CreateLog("Agent results - Command " & cmdId & " marked as completed")
+
+            ' Record door_event for completed command
+            Try
+                Dim cmdInfo = commandQueue.GetCommandById(cmdId)
+                If cmdInfo IsNot Nothing Then
+                    db.InsertDoorEvent(cmdInfo.DoorId, cmdInfo.CommandType, If(String.IsNullOrEmpty(result), "{}", result), cmdInfo.UserId, agentId, "command")
+                    CreateLog("Agent results - Door event recorded: " & cmdInfo.CommandType & " for door " & cmdInfo.DoorId)
+                End If
+            Catch ex As Exception
+                CreateLog("Agent results - Failed to record door event: " & ex.Message)
+            End Try
         Else
             commandQueue.MarkAsFailed(cmdId, If(String.IsNullOrEmpty(errorMsg), "Unknown error", errorMsg))
             CreateLog("Agent results - Command " & cmdId & " marked as failed: " & If(String.IsNullOrEmpty(errorMsg), "Unknown error", errorMsg))
+
+            ' Record door_event for failed command
+            Try
+                Dim cmdInfo = commandQueue.GetCommandById(cmdId)
+                If cmdInfo IsNot Nothing Then
+                    db.InsertDoorEvent(cmdInfo.DoorId, cmdInfo.CommandType & "_failed", If(String.IsNullOrEmpty(errorMsg), "Unknown error", errorMsg), cmdInfo.UserId, agentId, "command")
+                    CreateLog("Agent results - Door event recorded: " & cmdInfo.CommandType & "_failed for door " & cmdInfo.DoorId)
+                End If
+            Catch ex As Exception
+                CreateLog("Agent results - Failed to record door event: " & ex.Message)
+            End Try
         End If
 
         response.StatusCode = 200
@@ -1898,8 +1932,171 @@ Public Class Service1
             End While
         End If
 
+        CreateLog("Agent ingress - Inserted " & inserted & " events for agent " & agentId)
+
         response.StatusCode = 200
         SendJsonResponse(response, "{""status"":""ok"",""inserted"":" & inserted & "}")
+    End Sub
+
+    ' ===== Discovered Devices (Admin mobile endpoints) =====
+
+    Private Sub HandleDiscoveredDeviceRoutes(context As HttpListenerContext, principal As ClaimsPrincipal, enterpriseId As Integer, segments As String())
+        Dim request = context.Request
+        Dim response = context.Response
+        Dim userId = PermissionChecker.GetUserIdFromClaims(principal)
+
+        ' Only admins can manage discovered devices
+        If Not PermissionChecker.IsAdminFromClaims(principal) Then
+            response.StatusCode = 403
+            SendJsonResponse(response, "{""error"":""Admin access required""}")
+            Return
+        End If
+
+        ' GET /{tenant}/discovered-devices — list pending devices
+        If segments.Length = 2 AndAlso request.HttpMethod = "GET" Then
+            Dim devices = db.GetPendingDiscoveredDevices(enterpriseId)
+            Dim json As New System.Text.StringBuilder()
+            json.Append("{""devices"":[")
+            Dim first = True
+            For Each d As DatabaseHelper.DiscoveredDeviceInfo In devices
+                If Not first Then json.Append(",")
+                first = False
+                json.Append("{""id"":").Append(d.Id)
+                json.Append(",""agent_id"":").Append(d.AgentId)
+                json.Append(",""device_name"":""").Append(d.DeviceName.Replace("""", "\""")).Append("""")
+                json.Append(",""terminal_ip"":""").Append(d.TerminalIP).Append("""")
+                json.Append(",""terminal_port"":").Append(d.TerminalPort)
+                json.Append(",""discovered_at"":""").Append(d.DiscoveredAt.ToString("yyyy-MM-dd HH:mm:ss")).Append("""")
+                json.Append("}")
+            Next
+            json.Append("]}")
+            response.StatusCode = 200
+            SendJsonResponse(response, json.ToString())
+            Return
+        End If
+
+        ' POST /{tenant}/discovered-devices/{id}/approve
+        If segments.Length = 4 AndAlso segments(3) = "approve" AndAlso request.HttpMethod = "POST" Then
+            Dim deviceId As Integer
+            If Integer.TryParse(segments(2), deviceId) Then
+                Try
+                    ' Check quota before approving
+                    Dim currentCount = db.GetActiveDoorCount(enterpriseId)
+                    Dim maxQuota = db.GetEnterpriseQuota(enterpriseId)
+                    If currentCount >= maxQuota Then
+                        response.StatusCode = 400
+                        SendJsonResponse(response, "{""error"":""Door quota exceeded""}")
+                        Return
+                    End If
+                    db.ApproveDiscoveredDevice(deviceId, enterpriseId)
+                    CreateLog("Discovered device " & deviceId & " approved by user " & userId)
+                    response.StatusCode = 200
+                    SendJsonResponse(response, "{""status"":""ok""}")
+                Catch ex As Exception
+                    response.StatusCode = 500
+                    SendJsonResponse(response, "{""error"":""" & ex.Message.Replace("""", "\""") & """}")
+                End Try
+                Return
+            End If
+        End If
+
+        ' POST /{tenant}/discovered-devices/{id}/dismiss
+        If segments.Length = 4 AndAlso segments(3) = "dismiss" AndAlso request.HttpMethod = "POST" Then
+            Dim deviceId As Integer
+            If Integer.TryParse(segments(2), deviceId) Then
+                db.DismissDiscoveredDevice(deviceId, enterpriseId)
+                CreateLog("Discovered device " & deviceId & " dismissed by user " & userId)
+                response.StatusCode = 200
+                SendJsonResponse(response, "{""status"":""ok""}")
+                Return
+            End If
+        End If
+
+        SendNotFound(response)
+    End Sub
+
+    ' ===== Agent discovered-doors handler =====
+
+    Private Sub HandleAgentDiscoveredDoors(context As HttpListenerContext, agentId As Integer)
+        Dim request = context.Request
+        Dim response = context.Response
+
+        Dim body = ReadRequestBody(request)
+        CreateLog("Agent discovered-doors - Body: " & body)
+
+        ' Get enterprise_id for this agent
+        Dim enterpriseIdOpt = db.GetEnterpriseIdForAgent(agentId)
+        If Not enterpriseIdOpt.HasValue Then
+            response.StatusCode = 400
+            SendJsonResponse(response, "{""error"":""Unknown agent""}")
+            Return
+        End If
+        Dim enterpriseId = enterpriseIdOpt.Value
+
+        ' Check door quota
+        Dim currentCount = db.GetActiveDoorCount(enterpriseId)
+        Dim maxQuota = db.GetEnterpriseQuota(enterpriseId)
+
+        ' Parse doors array: {"doors":[{"name":"...","terminal_ip":"...","terminal_port":4370},...]}
+        Dim created As Integer = 0
+        Dim pending As Integer = 0
+        Dim existing As Integer = 0
+        Dim doorsStart = body.IndexOf("[")
+        Dim doorsEnd = body.LastIndexOf("]")
+        If doorsStart >= 0 AndAlso doorsEnd > doorsStart Then
+            Dim doorsJson = body.Substring(doorsStart, doorsEnd - doorsStart + 1)
+            Dim idx = 0
+            While idx < doorsJson.Length
+                Dim objStart = doorsJson.IndexOf("{"c, idx)
+                If objStart = -1 Then Exit While
+                Dim objEnd = doorsJson.IndexOf("}"c, objStart)
+                If objEnd = -1 Then Exit While
+                Dim objJson = doorsJson.Substring(objStart, objEnd - objStart + 1)
+
+                Dim doorName = ExtractJsonString(objJson, "name")
+                Dim terminalIp = ExtractJsonString(objJson, "terminal_ip")
+                Dim portStr = ExtractJsonNumber(objJson, "terminal_port")
+                Dim terminalPort As Integer = 4370
+                If Not String.IsNullOrEmpty(portStr) Then Integer.TryParse(portStr, terminalPort)
+                If String.IsNullOrEmpty(doorName) Then doorName = "Door " & terminalIp
+
+                If Not String.IsNullOrEmpty(terminalIp) Then
+                    ' Check if already exists as a door
+                    Dim existingDoorId = db.GetDoorIdByTerminalIP(enterpriseId, terminalIp)
+                    If existingDoorId.HasValue Then
+                        existing += 1
+                    Else
+                        ' Quota available? Auto-create. Otherwise store as pending for admin approval.
+                        If currentCount + created < maxQuota Then
+                            Try
+                                db.CreateDoorIfNotExists(enterpriseId, agentId, doorName, terminalIp, terminalPort)
+                                created += 1
+                                CreateLog("Agent discovered-doors - Auto-created door: " & doorName & " (" & terminalIp & ":" & terminalPort & ")")
+                            Catch ex As Exception
+                                CreateLog("Agent discovered-doors - Error creating door " & terminalIp & ": " & ex.Message)
+                            End Try
+                        Else
+                            ' Quota exceeded: store in discovered_devices for admin to choose
+                            Try
+                                db.InsertDiscoveredDevice(enterpriseId, agentId, doorName, terminalIp, terminalPort)
+                                pending += 1
+                                CreateLog("Agent discovered-doors - Quota exceeded, stored as pending: " & doorName & " (" & terminalIp & ")")
+                            Catch ex As Exception
+                                ' Duplicate key = already pending, that's fine
+                                CreateLog("Agent discovered-doors - Already pending or error: " & terminalIp & " - " & ex.Message)
+                            End Try
+                        End If
+                    End If
+                End If
+
+                idx = objEnd + 1
+            End While
+        End If
+
+        CreateLog("Agent discovered-doors - Created=" & created & " Pending=" & pending & " Existing=" & existing & " for agent " & agentId)
+
+        response.StatusCode = 200
+        SendJsonResponse(response, "{""status"":""ok"",""created"":" & created & ",""pending"":" & pending & ",""existing"":" & existing & "}")
     End Sub
 
     Private Sub SendJsonResponse(response As HttpListenerResponse, jsonResponse As String)

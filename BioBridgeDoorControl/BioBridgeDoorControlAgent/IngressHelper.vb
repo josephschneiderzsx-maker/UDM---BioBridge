@@ -62,6 +62,52 @@ Public Class IngressHelper
         Return events
     End Function
 
+    ''' <summary>
+    ''' Get door devices from Ingress DB.
+    ''' Only returns devices linked to a door via door_device table
+    ''' (excludes punchers, time clocks, and other non-door terminals).
+    ''' </summary>
+    Public Function GetDoorDevices() As List(Of IngressDevice)
+        Dim devices As New List(Of IngressDevice)()
+        Try
+            Using conn As New MySqlConnection(_connectionString)
+                conn.Open()
+                Dim sql = "SELECT d.DeviceName, d.ipaddress, d.Port, dr.name AS door_name " &
+                          "FROM door_device dd " &
+                          "INNER JOIN device d ON d.iddevice = dd.idDevice " &
+                          "LEFT JOIN door dr ON dr.iddoor = dd.idDoor " &
+                          "WHERE d.ipaddress IS NOT NULL AND d.ipaddress <> ''"
+                Using cmd As New MySqlCommand(sql, conn)
+                    Using rdr = cmd.ExecuteReader()
+                        While rdr.Read()
+                            Dim dev As New IngressDevice()
+                            If Not rdr.IsDBNull(0) Then dev.DeviceName = rdr.GetString(0)
+                            If Not rdr.IsDBNull(1) Then dev.IPAddress = rdr.GetString(1)
+                            If Not rdr.IsDBNull(2) Then dev.Port = rdr.GetInt32(2)
+                            If Not rdr.IsDBNull(3) Then dev.DoorName = rdr.GetString(3)
+                            If Not String.IsNullOrEmpty(dev.IPAddress) Then
+                                devices.Add(dev)
+                            End If
+                        End While
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            Try
+                EventLog.WriteEntry("UDM-Agent", "IngressHelper.GetDoorDevices error: " & ex.Message, EventLogEntryType.Warning)
+            Catch
+            End Try
+        End Try
+        Return devices
+    End Function
+
+    Public Class IngressDevice
+        Public Property DeviceName As String
+        Public Property DoorName As String
+        Public Property IPAddress As String
+        Public Property Port As Integer = 4370
+    End Class
+
     Public Class IngressEvent
         Public Property IngressId As Integer
         Public Property SerialNo As String

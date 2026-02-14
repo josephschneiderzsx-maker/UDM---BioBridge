@@ -604,6 +604,50 @@ class ApiService {
     const data = await response.json();
     return data.agents || [];
   }
+
+  // ===== Discovered Devices (Admin) =====
+  async getDiscoveredDevices() {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
+    const url = `${this.baseUrl}/${this.tenant}/discovered-devices`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) {
+      await this._throwIfNotOk(response, 'Failed to get discovered devices');
+    }
+    const data = await response.json();
+    return data.devices || [];
+  }
+
+  async approveDiscoveredDevice(deviceId) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
+    const url = `${this.baseUrl}/${this.tenant}/discovered-devices/${deviceId}/approve`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) {
+      await this._throwIfNotOk(response, 'Failed to approve device');
+    }
+    return await response.json();
+  }
+
+  async dismissDiscoveredDevice(deviceId) {
+    await this.initialize();
+    if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
+    const url = `${this.baseUrl}/${this.tenant}/discovered-devices/${deviceId}/dismiss`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) {
+      await this._throwIfNotOk(response, 'Failed to dismiss device');
+    }
+    return await response.json();
+  }
 }
 
 export default new ApiService();

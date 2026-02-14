@@ -178,6 +178,36 @@ Public Class ServerClient
         Public Property TerminalPort As Integer
     End Class
 
+    Public Function SendDiscoveredDoors(agentId As Integer, devices As List(Of IngressHelper.IngressDevice)) As String
+        Try
+            If devices Is Nothing OrElse devices.Count = 0 Then Return Nothing
+
+            Dim url = _config.ServerUrl.TrimEnd("/"c) & "/agents/" & agentId & "/discovered-doors"
+            Dim json As New System.Text.StringBuilder()
+            json.Append("{""doors"":[")
+            Dim first = True
+            For Each dev As IngressHelper.IngressDevice In devices
+                If Not first Then json.Append(",")
+                first = False
+                ' Prefer door name from Ingress door table, fallback to device name
+                Dim displayName = If(Not String.IsNullOrEmpty(dev.DoorName), dev.DoorName, If(Not String.IsNullOrEmpty(dev.DeviceName), dev.DeviceName, "Door " & dev.IPAddress))
+                json.Append("{""name"":""").Append(displayName.Replace("""", "\""")).Append("""")
+                json.Append(",""terminal_ip"":""").Append(dev.IPAddress).Append("""")
+                json.Append(",""terminal_port"":").Append(dev.Port)
+                json.Append("}")
+            Next
+            json.Append("]}")
+
+            Return SendPostRequest(url, json.ToString())
+        Catch ex As Exception
+            Try
+                EventLog.WriteEntry("UDM-Agent", "SendDiscoveredDoors error: " & ex.Message, EventLogEntryType.Warning)
+            Catch
+            End Try
+            Return Nothing
+        End Try
+    End Function
+
     Public Sub SendIngressEvents(agentId As Integer, events As List(Of IngressHelper.IngressEvent))
         Try
             If events Is Nothing OrElse events.Count = 0 Then Return

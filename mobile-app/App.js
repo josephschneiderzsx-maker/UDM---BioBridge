@@ -5,13 +5,14 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar, View, Animated, StyleSheet, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { LayoutList, Plus, User, History } from 'lucide-react-native';
+import { DoorOpen, Plus, User, History } from 'lucide-react-native';
 import Logo from './components/Logo';
 import { RootNavigationProvider } from './contexts/RootNavigationContext';
 import LoginScreen from './screens/LoginScreen';
 import DoorListScreen from './screens/DoorListScreen';
 import DoorControlScreen from './screens/DoorControlScreen';
 import AddDoorScreen from './screens/AddDoorScreen';
+import DiscoveredDevicesScreen from './screens/DiscoveredDevicesScreen';
 import EditDoorScreen from './screens/EditDoorScreen';
 import AccountScreen from './screens/AccountScreen';
 import UsersListScreen from './screens/UsersListScreen';
@@ -124,6 +125,7 @@ function StatusStack() {
         }}
       />
       <Stack.Screen name="EditDoor" component={EditDoorScreen} />
+      <Stack.Screen name="DiscoveredDevices" component={DiscoveredDevicesScreen} />
       <Stack.Screen name="ActivityLog" component={ActivityLogScreen} />
     </Stack.Navigator>
   );
@@ -179,9 +181,9 @@ function MainTabs() {
         name="StatusTab"
         component={StatusStack}
         options={{
-          title: 'Status',
+          title: 'Doors',
           tabBarIcon: ({ color, size }) => (
-            <LayoutList size={size || 22} color={color} strokeWidth={2} />
+            <DoorOpen size={size || 22} color={color} strokeWidth={2} />
           ),
         }}
       />

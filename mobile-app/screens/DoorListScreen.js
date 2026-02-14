@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Shield, Sun, Moon, Clock } from 'lucide-react-native';
+import { Shield, Sun, Moon, Clock, Radio } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import api from '../services/api';
 import DoorCard from '../components/DoorCard';
@@ -33,6 +33,7 @@ export default function DoorListScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [quota, setQuota] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingDevicesCount, setPendingDevicesCount] = useState(0);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerSlideAnim = useRef(new Animated.Value(16)).current;
@@ -41,6 +42,7 @@ export default function DoorListScreen({ navigation }) {
     loadDoors();
     loadQuota();
     checkAdminStatus();
+    loadPendingDevices();
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -60,6 +62,7 @@ export default function DoorListScreen({ navigation }) {
     const unsubscribe = navigation.addListener('focus', () => {
       loadDoors();
       loadQuota();
+      loadPendingDevices();
     });
     return unsubscribe;
   }, [navigation]);
@@ -73,6 +76,16 @@ export default function DoorListScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Failed to check admin status:', error);
+    }
+  };
+
+  const loadPendingDevices = async () => {
+    try {
+      const devices = await api.getDiscoveredDevices();
+      setPendingDevicesCount(devices.length);
+    } catch {
+      // Not admin or feature not available — ignore
+      setPendingDevicesCount(0);
     }
   };
 
@@ -249,6 +262,20 @@ export default function DoorListScreen({ navigation }) {
           </View>
         </Animated.View>
 
+        {/* Discovered devices banner */}
+        {isAdmin && pendingDevicesCount > 0 && (
+          <TouchableOpacity
+            style={[styles.discoveredBanner, { backgroundColor: colors.primaryDim, borderColor: colors.primary }]}
+            onPress={() => navigation.navigate('DiscoveredDevices')}
+            activeOpacity={0.7}
+          >
+            <Radio size={16} color={colors.primary} strokeWidth={2} />
+            <Text style={[styles.discoveredBannerText, { color: colors.primary }]}>
+              {pendingDevicesCount} new {pendingDevicesCount === 1 ? 'door' : 'doors'} detected — Tap to review
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* Content */}
         {loading && doors.length === 0 ? (
           renderLoader()
@@ -382,5 +409,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  discoveredBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+  },
+  discoveredBannerText: {
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
   },
 });

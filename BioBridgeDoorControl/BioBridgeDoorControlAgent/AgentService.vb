@@ -89,6 +89,14 @@ Public Class AgentService
             If configManager.IngressEnabled Then
                 Try
                     ingressHelper = New IngressHelper(configManager.IngressConnectionString)
+
+                    ' Auto-discover doors from Ingress at startup
+                    Try
+                        SyncDiscoveredDoors()
+                    Catch discEx As Exception
+                        CreateLog("Warning: Initial door discovery failed: " & discEx.Message)
+                    End Try
+
                     ingressThread = New Thread(AddressOf IngressSyncLoop)
                     ingressThread.IsBackground = True
                     ingressThread.Start()
@@ -234,13 +242,23 @@ Public Class AgentService
 
     Private Sub IngressSyncLoop()
         Dim syncInterval = configManager.GetIngressSyncInterval()
+        Dim doorDiscoveryCounter As Integer = 0
+        Dim doorDiscoveryEveryN As Integer = 10 ' Re-discover doors every 10 sync cycles
         While isRunning
             Try
                 If agentId > 0 AndAlso ingressHelper IsNot Nothing Then
+                    ' Sync events
                     Dim events = ingressHelper.GetNewEvents()
                     If events.Count > 0 Then
                         CreateLog("Ingress: Syncing " & events.Count & " new events")
                         serverClient.SendIngressEvents(agentId, events)
+                    End If
+
+                    ' Periodically re-discover doors from Ingress
+                    doorDiscoveryCounter += 1
+                    If doorDiscoveryCounter >= doorDiscoveryEveryN Then
+                        doorDiscoveryCounter = 0
+                        SyncDiscoveredDoors()
                     End If
                 End If
                 Thread.Sleep(syncInterval)
@@ -249,6 +267,21 @@ Public Class AgentService
                 Thread.Sleep(syncInterval * 2) ' Back off on error
             End Try
         End While
+    End Sub
+
+    Private Sub SyncDiscoveredDoors()
+        Try
+            Dim devices = ingressHelper.GetDoorDevices()
+            If devices.Count > 0 Then
+                CreateLog("Ingress: Discovered " & devices.Count & " door devices, sending to server")
+                Dim result = serverClient.SendDiscoveredDoors(agentId, devices)
+                CreateLog("Ingress: Door discovery result: " & If(String.IsNullOrEmpty(result), "(empty)", result))
+                ' Reload door info after discovery to pick up new doors
+                LoadDoorInfo()
+            End If
+        Catch ex As Exception
+            CreateLog("Error in SyncDiscoveredDoors: " & ex.Message)
+        End Try
     End Sub
 
     Protected Sub CreateLog(ByVal sMsg As String)

@@ -497,6 +497,126 @@ Public Class DatabaseHelper
         End Using
     End Function
 
+    ''' <summary>
+    ''' Create a door if it doesn't already exist (matched by terminal_ip within the enterprise).
+    ''' Returns the door ID (existing or newly created).
+    ''' </summary>
+    Public Function CreateDoorIfNotExists(enterpriseId As Integer, agentId As Integer, name As String, terminalIp As String, terminalPort As Integer) As Integer
+        ' Check if door already exists
+        Dim existingId = GetDoorIdByTerminalIP(enterpriseId, terminalIp)
+        If existingId.HasValue Then Return existingId.Value
+
+        ' Create new door
+        Using conn = GetConnection()
+            Dim sql = "INSERT INTO doors (enterprise_id, agent_id, name, terminal_ip, terminal_port, default_delay, is_active, created_at) " &
+                      "VALUES (@ent, @aid, @name, @ip, @port, 3000, 1, NOW())"
+            Using cmd = New MySqlCommand(sql, conn)
+                cmd.Parameters.AddWithValue("@ent", enterpriseId)
+                cmd.Parameters.AddWithValue("@aid", agentId)
+                cmd.Parameters.AddWithValue("@name", name)
+                cmd.Parameters.AddWithValue("@ip", terminalIp)
+                cmd.Parameters.AddWithValue("@port", terminalPort)
+                cmd.ExecuteNonQuery()
+                Return CInt(cmd.LastInsertedId)
+            End Using
+        End Using
+    End Function
+
+    ' ===== Discovered Devices =====
+
+    Public Sub InsertDiscoveredDevice(enterpriseId As Integer, agentId As Integer, deviceName As String, terminalIp As String, terminalPort As Integer)
+        Using conn = GetConnection()
+            Dim sql = "INSERT INTO discovered_devices (enterprise_id, agent_id, device_name, terminal_ip, terminal_port, status, discovered_at) " &
+                      "VALUES (@ent, @aid, @name, @ip, @port, 'pending', NOW()) " &
+                      "ON DUPLICATE KEY UPDATE device_name = @name, terminal_port = @port, agent_id = @aid, discovered_at = NOW(), status = IF(status = 'dismissed', 'dismissed', 'pending')"
+            Using cmd = New MySqlCommand(sql, conn)
+                cmd.Parameters.AddWithValue("@ent", enterpriseId)
+                cmd.Parameters.AddWithValue("@aid", agentId)
+                cmd.Parameters.AddWithValue("@name", deviceName)
+                cmd.Parameters.AddWithValue("@ip", terminalIp)
+                cmd.Parameters.AddWithValue("@port", terminalPort)
+                cmd.ExecuteNonQuery()
+            End Using
+        End Using
+    End Sub
+
+    Public Function GetPendingDiscoveredDevices(enterpriseId As Integer) As List(Of DiscoveredDeviceInfo)
+        Dim devices As New List(Of DiscoveredDeviceInfo)()
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand(
+                "SELECT id, agent_id, device_name, terminal_ip, terminal_port, discovered_at " &
+                "FROM discovered_devices WHERE enterprise_id = @ent AND status = 'pending' ORDER BY discovered_at DESC", conn)
+                cmd.Parameters.AddWithValue("@ent", enterpriseId)
+                Using rdr = cmd.ExecuteReader()
+                    While rdr.Read()
+                        Dim d As New DiscoveredDeviceInfo()
+                        d.Id = rdr.GetInt32(0)
+                        d.AgentId = rdr.GetInt32(1)
+                        d.DeviceName = rdr.GetString(2)
+                        d.TerminalIP = rdr.GetString(3)
+                        d.TerminalPort = rdr.GetInt32(4)
+                        d.DiscoveredAt = rdr.GetDateTime(5)
+                        devices.Add(d)
+                    End While
+                End Using
+            End Using
+        End Using
+        Return devices
+    End Function
+
+    Public Sub ApproveDiscoveredDevice(deviceId As Integer, enterpriseId As Integer)
+        ' Get device info first
+        Dim dev As DiscoveredDeviceInfo = Nothing
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand(
+                "SELECT id, agent_id, device_name, terminal_ip, terminal_port FROM discovered_devices WHERE id = @id AND enterprise_id = @ent AND status = 'pending'", conn)
+                cmd.Parameters.AddWithValue("@id", deviceId)
+                cmd.Parameters.AddWithValue("@ent", enterpriseId)
+                Using rdr = cmd.ExecuteReader()
+                    If rdr.Read() Then
+                        dev = New DiscoveredDeviceInfo()
+                        dev.Id = rdr.GetInt32(0)
+                        dev.AgentId = rdr.GetInt32(1)
+                        dev.DeviceName = rdr.GetString(2)
+                        dev.TerminalIP = rdr.GetString(3)
+                        dev.TerminalPort = rdr.GetInt32(4)
+                    End If
+                End Using
+            End Using
+        End Using
+        If dev Is Nothing Then Return
+
+        ' Create the door
+        CreateDoorIfNotExists(enterpriseId, dev.AgentId, dev.DeviceName, dev.TerminalIP, dev.TerminalPort)
+
+        ' Mark as approved
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand("UPDATE discovered_devices SET status = 'approved', resolved_at = NOW() WHERE id = @id", conn)
+                cmd.Parameters.AddWithValue("@id", deviceId)
+                cmd.ExecuteNonQuery()
+            End Using
+        End Using
+    End Sub
+
+    Public Sub DismissDiscoveredDevice(deviceId As Integer, enterpriseId As Integer)
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand("UPDATE discovered_devices SET status = 'dismissed', resolved_at = NOW() WHERE id = @id AND enterprise_id = @ent", conn)
+                cmd.Parameters.AddWithValue("@id", deviceId)
+                cmd.Parameters.AddWithValue("@ent", enterpriseId)
+                cmd.ExecuteNonQuery()
+            End Using
+        End Using
+    End Sub
+
+    Public Class DiscoveredDeviceInfo
+        Public Property Id As Integer
+        Public Property AgentId As Integer
+        Public Property DeviceName As String
+        Public Property TerminalIP As String
+        Public Property TerminalPort As Integer
+        Public Property DiscoveredAt As DateTime
+    End Class
+
     Public Sub InsertDoorEvent(doorId As Integer, eventType As String, eventData As String, Optional userId As Integer? = Nothing, Optional agentId As Integer? = Nothing, Optional source As String = "command", Optional ingressEventId As Integer? = Nothing)
         Using conn = GetConnection()
             Dim sql = "INSERT INTO door_events (door_id, user_id, agent_id, event_type, event_data, source, ingress_event_id) " &
