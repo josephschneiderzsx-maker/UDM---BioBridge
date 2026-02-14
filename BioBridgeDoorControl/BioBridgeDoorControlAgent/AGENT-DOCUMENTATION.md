@@ -228,36 +228,106 @@ loop:
 
 ### Prerequisites
 
-- Windows machine with .NET runtime
-- Network access to:
-  - URZIS PASS Server (HTTP, default port 8080)
-  - Physical terminal(s) (TCP, default port 4370)
-- BioBridgeSDKDLL.dll in the application directory
+- Windows 10/11 or Server
+- .NET Framework 4.8
+- Network access to URZIS PASS server (port 8080)
+- Network access to BioBridge/ZKTeco terminals (port 4370)
+- Agent files: UDM-Agent.exe, UDM-Agent.exe.config, BioBridgeSDKDLLv3.dll, Interop.zkemkeeper.dll, MySql.Data.dll (and optionally InstallUtil32/64)
 
-### Steps
+### Step 1 – Install location (important)
 
-1. **Database Setup**: Ensure the enterprise and agent records exist:
-   ```sql
-   INSERT INTO agents (enterprise_id, name, agent_key, is_online)
-   VALUES (1, 'Agent-PC-Bureau', 'YOUR_UNIQUE_KEY', 0);
-   ```
+- **Avoid** installing under `C:\Program Files\AGENT` if the agent is built as 32-bit (x86): Windows then redirects config reads to `C:\Program Files (x86)\AGENT\`, so you must maintain the same config in both places, which is error-prone.
+- **Recommended**: install in a non-redirected folder, e.g. `C:\AGENT` or `C:\URZIS PASS\AGENT`.
+- Copy all agent files (exe, exe.config, dlls) into that folder.
 
-2. **Configuration**: Edit `app.config`:
-   - Set `ServerUrl` to the server address
-   - Set `AgentKey` to match the `agent_key` in the database
-   - Set `EnterpriseId` to the correct enterprise
-   - Adjust polling/heartbeat intervals as needed
+### Step 2 – Configuration file
 
-3. **Build**: `dotnet build BioBridgeDoorControlAgent.sln --configuration Release`
+- Edit **UDM-Agent.exe.config** (in the same folder as UDM-Agent.exe).
+- Use **lowercase** XML tags: `<add key="..." value="..." />`. Uppercase (`<ADD KEY="..." VALUE="..." />`) is not recognised and causes "AgentKey is required in app.config".
 
-4. **Install**: Install as Windows Service:
-   ```
-   sc create UDM-Agent binPath= "C:\path\to\BioBridgeDoorControlAgent.exe"
-   sc config UDM-Agent start= auto
-   sc start UDM-Agent
-   ```
+Example:
 
-5. **Verify**: Check that the agent appears as online in the server (via `GET /{tenant}/agents`).
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <appSettings>
+    <add key="ServerUrl" value="http://app.pass.urzis.com:8080" />
+    <add key="AgentKey" value="YOUR_UNIQUE_AGENT_KEY" />
+    <add key="EnterpriseId" value="100" />
+    <add key="PollingInterval" value="500" />
+    <add key="HeartbeatInterval" value="30000" />
+    <add key="CommandTimeout" value="2" />
+    <add key="IngressEnabled" value="false" />
+  </appSettings>
+</configuration>
+```
+
+- **ServerUrl**: base URL of the server (no trailing slash).
+- **AgentKey**: unique key for this agent (must match the value in the database).
+- **EnterpriseId**: enterprise ID in udm_multitenant.
+
+### Step 3 – Register the agent in the database (server side)
+
+On the URZIS PASS server, in database **udm_multitenant**:
+
+```sql
+USE udm_multitenant;
+
+-- Ensure the enterprise exists (adjust or create if needed)
+SELECT id, name FROM enterprises WHERE id = 100;
+
+INSERT INTO agents (enterprise_id, name, agent_key, is_online, is_active)
+VALUES (100, 'Agent display name (e.g. Agent Site 1)', 'YOUR_UNIQUE_AGENT_KEY', 0, 1);
+```
+
+- **agent_key** must be **exactly** the same as **AgentKey** in UDM-Agent.exe.config.
+- **enterprise_id** must match **EnterpriseId** in the config.
+
+### Step 4 – Install the Windows service
+
+- Open **PowerShell as Administrator** (right-click PowerShell → Run as administrator).
+- Go to the agent folder, e.g. `cd "C:\AGENT"`.
+- Run the service installer (32-bit or 64-bit depending on your agent build):
+
+```powershell
+# 32-bit (most common for UDM-Agent)
+C:\Windows\Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe UDM-Agent.exe
+
+# 64-bit
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319\InstallUtil.exe UDM-Agent.exe
+```
+
+- If you get an Event Log–related error, run PowerShell as Administrator and retry.
+
+### Step 5 – If the agent is installed under C:\Program Files\AGENT (32-bit)
+
+- The 32-bit process reads config from **C:\Program Files (x86)\AGENT\**.
+- Create that folder and copy the same UDM-Agent.exe.config there:
+
+```powershell
+New-Item -ItemType Directory -Path "C:\Program Files (x86)\AGENT" -Force
+Copy-Item "C:\Program Files\AGENT\UDM-Agent.exe.config" -Destination "C:\Program Files (x86)\AGENT\UDM-Agent.exe.config" -Force
+```
+
+- Then restart the service.
+
+### Step 6 – Start and verify
+
+```powershell
+Start-Service -Name "UDM-Agent"
+Get-Service -Name "UDM-Agent"
+Get-EventLog -LogName Application -Source "UDM-Agent" -Newest 10
+```
+
+- In the logs you should see "Agent registered with ID: X" and "Door info loaded. Total doors: N".
+- In the database: `SELECT id, name, agent_key, is_online, last_heartbeat FROM agents WHERE agent_key = 'YOUR_KEY';` — **is_online** should become 1 and **last_heartbeat** should update.
+
+### Uninstall
+
+```powershell
+Stop-Service -Name "UDM-Agent"
+C:\Windows\Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe /u UDM-Agent.exe
+```
 
 ### Multiple Agents
 
@@ -272,7 +342,10 @@ You can run multiple agents for the same enterprise, each managing different doo
 
 | Issue | Possible Cause | Solution |
 |-------|---------------|----------|
-| Agent not appearing online | Wrong `AgentKey` or `ServerUrl` | Check `app.config` values |
+| "AgentKey is required in app.config" | Uppercase XML tags (`<ADD KEY=...>`) or wrong config file | Use lowercase `<add key="..." value="..." />`; ensure you edit UDM-Agent.exe.config in the folder used by the service. If installed under Program Files with 32-bit agent, also copy config to `C:\Program Files (x86)\AGENT\`. |
+| Agent not appearing online | Wrong `AgentKey` or `ServerUrl` | Check UDM-Agent.exe.config; verify agent_key matches database; test connectivity to server (e.g. POST /agents/register from agent machine). |
+| Config not read (keys empty) | 32-bit process + install under Program Files | Service reads from `C:\Program Files (x86)\AGENT\`. Copy UDM-Agent.exe.config there, or reinstall agent in e.g. `C:\AGENT` to avoid redirect. |
+| Event Log error when installing | Insufficient privileges | Run PowerShell as Administrator. |
 | Commands not executing | Agent not connected to terminal | Check terminal IP/port, network connectivity |
 | High latency | Polling interval too high | Reduce `PollingInterval` (default 500ms) |
 | "Connection refused" to terminal | Terminal offline or wrong port | Verify terminal is powered on and port 4370 is accessible |

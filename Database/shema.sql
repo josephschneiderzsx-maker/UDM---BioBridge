@@ -1,152 +1,196 @@
-CREATE DATABASE IF NOT EXISTS udm_multitenant
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
+/*
+SQLyog Community v13.2.0 (64 bit)
+MySQL - 5.7.42-log : Database - udm_multitenant
+*********************************************************************
+*/
 
-USE udm_multitenant;
+/*!40101 SET NAMES utf8 */;
 
-CREATE TABLE enterprises (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  slug VARCHAR(50) NOT NULL UNIQUE,
-  name VARCHAR(255) NOT NULL,
-  door_quota INT NOT NULL DEFAULT 10,
-  user_quota INT NOT NULL DEFAULT 20,
-  license_start_date DATE NULL,
-  license_end_date DATE NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  is_active TINYINT(1) NOT NULL DEFAULT 1
-);
+/*!40101 SET SQL_MODE=''*/;
 
-CREATE TABLE agents (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  enterprise_id INT NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  agent_key VARCHAR(64) NOT NULL UNIQUE,
-  last_heartbeat DATETIME NULL,
-  is_online TINYINT(1) NOT NULL DEFAULT 0,
-  version VARCHAR(20) NOT NULL DEFAULT '1.0.0',
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  is_active TINYINT(1) NOT NULL DEFAULT 1,
-  CONSTRAINT fk_agents_enterprise
-    FOREIGN KEY (enterprise_id) REFERENCES enterprises(id)
-      ON DELETE CASCADE
-);
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+CREATE DATABASE /*!32312 IF NOT EXISTS*/`udm_multitenant` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-CREATE TABLE doors (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  enterprise_id INT NOT NULL,
-  agent_id INT NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  terminal_ip VARCHAR(15) NOT NULL,
-  terminal_port INT NOT NULL DEFAULT 4370,
-  default_delay INT NOT NULL DEFAULT 3000,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  is_active TINYINT(1) NOT NULL DEFAULT 1,
-  CONSTRAINT fk_doors_enterprise
-    FOREIGN KEY (enterprise_id) REFERENCES enterprises(id)
-      ON DELETE CASCADE,
-  CONSTRAINT fk_doors_agent
-    FOREIGN KEY (agent_id) REFERENCES agents(id)
-      ON DELETE CASCADE,
-  INDEX idx_doors_enterprise (enterprise_id, is_active),
-  INDEX idx_doors_agent (agent_id)
-);
+USE `udm_multitenant`;
 
-CREATE TABLE users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  enterprise_id INT NOT NULL,
-  email VARCHAR(255) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL,
-  first_name VARCHAR(100) NOT NULL,
-  last_name VARCHAR(100) NOT NULL,
-  is_admin TINYINT(1) NOT NULL DEFAULT 0,
-  biometric_required TINYINT(1) NOT NULL DEFAULT 1,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  last_login DATETIME NULL,
-  is_active TINYINT(1) NOT NULL DEFAULT 1,
-  CONSTRAINT fk_users_enterprise
-    FOREIGN KEY (enterprise_id) REFERENCES enterprises(id)
-      ON DELETE CASCADE
-);
+/*Table structure for table `agents` */
 
-CREATE TABLE user_door_permissions (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  door_id INT NOT NULL,
-  can_open TINYINT(1) NOT NULL DEFAULT 1,
-  can_close TINYINT(1) NOT NULL DEFAULT 1,
-  can_view_status TINYINT(1) NOT NULL DEFAULT 1,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_udp_user
-    FOREIGN KEY (user_id) REFERENCES users(id)
-      ON DELETE CASCADE,
-  CONSTRAINT fk_udp_door
-    FOREIGN KEY (door_id) REFERENCES doors(id)
-      ON DELETE CASCADE,
-  CONSTRAINT user_door_unique UNIQUE (user_id, door_id),
-  INDEX idx_udp_door (door_id, user_id)
-);
+DROP TABLE IF EXISTS `agents`;
 
-CREATE TABLE command_queue (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  agent_id INT NOT NULL,
-  door_id INT NOT NULL,
-  user_id INT NULL,
-  command_type VARCHAR(50) NOT NULL,
-  parameters TEXT NULL,
-  status VARCHAR(20) NOT NULL DEFAULT 'pending',
-  result TEXT NULL,
-  error_message TEXT NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  processed_at DATETIME NULL,
-  completed_at DATETIME NULL,
-  CONSTRAINT fk_cq_agent
-    FOREIGN KEY (agent_id) REFERENCES agents(id)
-      ON DELETE CASCADE,
-  CONSTRAINT fk_cq_door
-    FOREIGN KEY (door_id) REFERENCES doors(id)
-      ON DELETE CASCADE,
-  CONSTRAINT fk_cq_user
-    FOREIGN KEY (user_id) REFERENCES users(id)
-      ON DELETE SET NULL,
-  INDEX idx_agent_status (agent_id, status, created_at)
-);
+CREATE TABLE `agents` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `enterprise_id` int(11) NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `agent_key` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `last_heartbeat` datetime DEFAULT NULL,
+  `is_online` tinyint(1) NOT NULL DEFAULT '0',
+  `version` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '1.0.0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `agent_key` (`agent_key`),
+  KEY `fk_agents_enterprise` (`enterprise_id`),
+  CONSTRAINT `fk_agents_enterprise` FOREIGN KEY (`enterprise_id`) REFERENCES `enterprises` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE door_events (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  door_id INT NOT NULL,
-  user_id INT NULL,
-  agent_id INT NULL,
-  command_id INT NULL,
-  event_type VARCHAR(50) NOT NULL,
-  event_data TEXT NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_de_door
-    FOREIGN KEY (door_id) REFERENCES doors(id)
-      ON DELETE CASCADE,
-  CONSTRAINT fk_de_user
-    FOREIGN KEY (user_id) REFERENCES users(id)
-      ON DELETE SET NULL,
-  CONSTRAINT fk_de_agent
-    FOREIGN KEY (agent_id) REFERENCES agents(id)
-      ON DELETE SET NULL,
-  CONSTRAINT fk_de_cmd
-    FOREIGN KEY (command_id) REFERENCES command_queue(id)
-      ON DELETE SET NULL,
-  INDEX idx_door_created (door_id, created_at)
-);
+/*Table structure for table `command_queue` */
 
--- Données de test (license_start_date / license_end_date NULL = pas de restriction)
-INSERT INTO enterprises (slug, name, door_quota, user_quota, license_start_date, license_end_date) VALUES
-('entreprise-1', 'Entreprise 1', 10, 20, NULL, NULL);
+DROP TABLE IF EXISTS `command_queue`;
 
-INSERT INTO agents (enterprise_id, name, agent_key, is_online)
-VALUES (1, 'PC Bureau Principal', 'CHANGE_ME_AGENT_KEY_1', 0);
+CREATE TABLE `command_queue` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `agent_id` int(11) NOT NULL,
+  `door_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `command_type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `parameters` text COLLATE utf8mb4_unicode_ci,
+  `status` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `result` text COLLATE utf8mb4_unicode_ci,
+  `error_message` text COLLATE utf8mb4_unicode_ci,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `processed_at` datetime DEFAULT NULL,
+  `completed_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_cq_door` (`door_id`),
+  KEY `fk_cq_user` (`user_id`),
+  KEY `idx_agent_status` (`agent_id`,`status`,`created_at`),
+  CONSTRAINT `fk_cq_agent` FOREIGN KEY (`agent_id`) REFERENCES `agents` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_cq_door` FOREIGN KEY (`door_id`) REFERENCES `doors` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_cq_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO doors (enterprise_id, agent_id, name, terminal_ip, terminal_port, default_delay)
-VALUES
-(1, 1, 'Porte principale', '192.168.40.10', 4370, 3000),
-(1, 1, 'Porte arrière', '192.168.40.9', 4370, 3000);
+/*Table structure for table `door_events` */
 
-INSERT INTO users (enterprise_id, email, password_hash, first_name, last_name, is_admin, biometric_required)
-VALUES
-(1, 'admin@example.com', 'PLAINTEXT_TO_REPLACE_WITH_HASH', 'Admin', 'UDM', 1, 0);
+DROP TABLE IF EXISTS `door_events`;
+
+CREATE TABLE `door_events` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `door_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `agent_id` int(11) DEFAULT NULL,
+  `command_id` int(11) DEFAULT NULL,
+  `event_type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `event_data` text COLLATE utf8mb4_unicode_ci,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `ingress_event_id` int(11) DEFAULT NULL,
+  `source` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'command',
+  PRIMARY KEY (`id`),
+  KEY `fk_de_user` (`user_id`),
+  KEY `fk_de_agent` (`agent_id`),
+  KEY `fk_de_cmd` (`command_id`),
+  KEY `idx_door_created` (`door_id`,`created_at`),
+  KEY `idx_door_events_source` (`source`),
+  KEY `idx_door_events_created` (`created_at`),
+  CONSTRAINT `fk_de_agent` FOREIGN KEY (`agent_id`) REFERENCES `agents` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_de_cmd` FOREIGN KEY (`command_id`) REFERENCES `command_queue` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_de_door` FOREIGN KEY (`door_id`) REFERENCES `doors` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_de_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/*Table structure for table `doors` */
+
+DROP TABLE IF EXISTS `doors`;
+
+CREATE TABLE `doors` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `enterprise_id` int(11) NOT NULL,
+  `agent_id` int(11) NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `terminal_ip` varchar(15) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `terminal_port` int(11) NOT NULL DEFAULT '4370',
+  `default_delay` int(11) NOT NULL DEFAULT '3000',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `idx_doors_enterprise` (`enterprise_id`,`is_active`),
+  KEY `idx_doors_agent` (`agent_id`),
+  CONSTRAINT `fk_doors_agent` FOREIGN KEY (`agent_id`) REFERENCES `agents` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_doors_enterprise` FOREIGN KEY (`enterprise_id`) REFERENCES `enterprises` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/*Table structure for table `enterprises` */
+
+DROP TABLE IF EXISTS `enterprises`;
+
+CREATE TABLE `enterprises` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `slug` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `door_quota` int(11) NOT NULL DEFAULT '2',
+  `user_quota` int(11) NOT NULL DEFAULT '2',
+  `license_start_date` date DEFAULT NULL,
+  `license_end_date` date DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `slug` (`slug`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/*Table structure for table `notification_preferences` */
+
+DROP TABLE IF EXISTS `notification_preferences`;
+
+CREATE TABLE `notification_preferences` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `door_id` int(11) NOT NULL,
+  `notify_on_open` tinyint(1) NOT NULL DEFAULT '1',
+  `notify_on_close` tinyint(1) NOT NULL DEFAULT '0',
+  `notify_on_forced` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_door_notif_unique` (`user_id`,`door_id`),
+  KEY `fk_np_door` (`door_id`),
+  CONSTRAINT `fk_np_door` FOREIGN KEY (`door_id`) REFERENCES `doors` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_np_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/*Table structure for table `user_door_permissions` */
+
+DROP TABLE IF EXISTS `user_door_permissions`;
+
+CREATE TABLE `user_door_permissions` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `door_id` int(11) NOT NULL,
+  `can_open` tinyint(1) NOT NULL DEFAULT '1',
+  `can_close` tinyint(1) NOT NULL DEFAULT '1',
+  `can_view_status` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_door_unique` (`user_id`,`door_id`),
+  KEY `idx_udp_door` (`door_id`,`user_id`),
+  CONSTRAINT `fk_udp_door` FOREIGN KEY (`door_id`) REFERENCES `doors` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_udp_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/*Table structure for table `users` */
+
+DROP TABLE IF EXISTS `users`;
+
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `enterprise_id` int(11) NOT NULL,
+  `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `password_hash` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `first_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `last_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `is_admin` tinyint(1) NOT NULL DEFAULT '0',
+  `biometric_required` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `last_login` datetime DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`),
+  KEY `fk_users_enterprise` (`enterprise_id`),
+  CONSTRAINT `fk_users_enterprise` FOREIGN KEY (`enterprise_id`) REFERENCES `enterprises` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
