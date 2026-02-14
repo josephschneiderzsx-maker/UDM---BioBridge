@@ -91,6 +91,21 @@ Public Class DatabaseHelper
         End Using
     End Function
 
+    Public Function GetDoorIdsForAgent(agentId As Integer) As List(Of Integer)
+        Dim ids As New List(Of Integer)()
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand("SELECT id FROM doors WHERE agent_id = @aid AND is_active = 1", conn)
+                cmd.Parameters.AddWithValue("@aid", agentId)
+                Using rdr = cmd.ExecuteReader()
+                    While rdr.Read()
+                        ids.Add(rdr.GetInt32(0))
+                    End While
+                End Using
+            End Using
+        End Using
+        Return ids
+    End Function
+
     Public Function GetDoorsForUser(userId As Integer, enterpriseId As Integer, isAdmin As Boolean) As List(Of DoorInfo)
         Dim doors As New List(Of DoorInfo)()
         Using conn = GetConnection()
@@ -503,7 +518,7 @@ Public Class DatabaseHelper
     ''' </summary>
     Public Function CreateDoorIfNotExists(enterpriseId As Integer, agentId As Integer, name As String, terminalIp As String, terminalPort As Integer) As Integer
         ' Check if door already exists
-        Dim existingId = GetDoorIdByTerminalIP(enterpriseId, terminalIp)
+        Dim existingId As Integer? = GetDoorIdByTerminalIP(enterpriseId, terminalIp)
         If existingId.HasValue Then Return existingId.Value
 
         ' Create new door

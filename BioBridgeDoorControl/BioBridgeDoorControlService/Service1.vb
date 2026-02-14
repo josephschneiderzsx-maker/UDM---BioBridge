@@ -1895,6 +1895,10 @@ Public Class Service1
 
         ' Parse events array: {"events":[{"ingress_id":1,"event_type":"door_open","event_time":"...","device_ip":"...","description":"..."},...]}
         Dim inserted As Integer = 0
+
+        ' Pre-fetch door IDs for this agent (used when device_ip is empty)
+        Dim agentDoorIds As List(Of Integer) = db.GetDoorIdsForAgent(agentId)
+
         Dim eventsStart = body.IndexOf("[")
         Dim eventsEnd = body.LastIndexOf("]")
         If eventsStart >= 0 AndAlso eventsEnd > eventsStart Then
@@ -1912,20 +1916,31 @@ Public Class Service1
                 Dim description = ExtractJsonString(objJson, "description")
                 Dim ingressIdStr = ExtractJsonNumber(objJson, "ingress_id")
 
+                Dim ingressId As Integer? = Nothing
+                If Not String.IsNullOrEmpty(ingressIdStr) Then
+                    Dim iid As Integer
+                    If Integer.TryParse(ingressIdStr, iid) Then ingressId = iid
+                End If
+
+                Dim evType As String = If(String.IsNullOrEmpty(eventType), "ingress_event", eventType)
+
                 If Not String.IsNullOrEmpty(deviceIp) Then
                     ' Map device_ip to door_id
                     Dim doorIdOpt As Integer? = db.GetDoorIdByTerminalIP(enterpriseId, deviceIp)
                     If doorIdOpt.HasValue Then
-                        Dim ingressId As Integer? = Nothing
-                        If Not String.IsNullOrEmpty(ingressIdStr) Then
-                            Dim iid As Integer
-                            If Integer.TryParse(ingressIdStr, iid) Then ingressId = iid
-                        End If
-                        db.InsertDoorEvent(doorIdOpt.Value, If(String.IsNullOrEmpty(eventType), "ingress_event", eventType), description, Nothing, agentId, "ingress", ingressId)
+                        db.InsertDoorEvent(doorIdOpt.Value, evType, description, Nothing, agentId, "ingress", ingressId)
                         inserted += 1
                     Else
                         CreateLog("Agent ingress - No door found for IP: " & deviceIp)
                     End If
+                ElseIf agentDoorIds.Count = 1 Then
+                    ' Empty device_ip but agent has exactly one door: assign to it
+                    db.InsertDoorEvent(agentDoorIds(0), evType, description, Nothing, agentId, "ingress", ingressId)
+                    inserted += 1
+                ElseIf agentDoorIds.Count > 1 Then
+                    ' Empty device_ip with multiple doors: assign to first door (best effort)
+                    db.InsertDoorEvent(agentDoorIds(0), evType, description, Nothing, agentId, "ingress", ingressId)
+                    inserted += 1
                 End If
 
                 idx = objEnd + 1
