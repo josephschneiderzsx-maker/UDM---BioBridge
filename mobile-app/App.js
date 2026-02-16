@@ -19,6 +19,7 @@ import UsersListScreen from './screens/UsersListScreen';
 import CreateUserScreen from './screens/CreateUserScreen';
 import UserPermissionsScreen from './screens/UserPermissionsScreen';
 import ActivityLogScreen from './screens/ActivityLogScreen';
+import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 
 const Stack = createStackNavigator();
@@ -127,6 +128,7 @@ function StatusStack() {
       <Stack.Screen name="EditDoor" component={EditDoorScreen} />
       <Stack.Screen name="DiscoveredDevices" component={DiscoveredDevicesScreen} />
       <Stack.Screen name="ActivityLog" component={ActivityLogScreen} />
+      <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
     </Stack.Navigator>
   );
 }

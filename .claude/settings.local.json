@@ -18,7 +18,14 @@
       "Bash(powershell:*)",
       "Bash(dotnet build:*)",
       "Bash(\"C:\\\\Program Files\\\\Inkscape\\\\bin\\\\inkscape.exe\" \"U:\\\\D-biobridgeSDKservice\\\\icon.svg\" --export-type=png --export-filename=\"U:\\\\D-biobridgeSDKservice\\\\mobile-app\\\\assets\\\\adaptive-icon.png\" --export-width=1024 --export-height=1024 --export-background-opacity=0)",
-      "Bash(\"C:\\\\Program Files\\\\Inkscape\\\\bin\\\\inkscape.exe\" \"U:\\\\D-biobridgeSDKservice\\\\icon.svg\" --export-type=png --export-filename=\"U:\\\\D-biobridgeSDKservice\\\\mobile-app\\\\assets\\\\icon.png\" --export-width=1024 --export-height=1024 --export-background-opacity=0)"
+      "Bash(\"C:\\\\Program Files\\\\Inkscape\\\\bin\\\\inkscape.exe\" \"U:\\\\D-biobridgeSDKservice\\\\icon.svg\" --export-type=png --export-filename=\"U:\\\\D-biobridgeSDKservice\\\\mobile-app\\\\assets\\\\icon.png\" --export-width=1024 --export-height=1024 --export-background-opacity=0)",
+      "Bash(git status:*)",
+      "Bash(npm view:*)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" -version)",
+      "Bash(\"/c/Program Files \\(x86\\)/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/MSBuild.exe\" -version)",
+      "Bash(\"/c/Program Files \\(x86\\)/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/MSBuild.exe\" \"U:/D-biobridgeSDKservice/BioBridgeDoorControl/BioBridgeDoorControlService.sln\" /p:Configuration=Release /p:Platform=\"Any CPU\" /t:Rebuild /verbosity:minimal)",
+      "Bash(\"/c/Program Files \\(x86\\)/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/MSBuild.exe\":*)",
+      "Bash(\"C:/Program Files \\(x86\\)/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/MSBuild.exe\":*)"
     ]
   }
 }

@@ -98,7 +98,7 @@ export default function LoginScreen({ navigation }) {
               <Logo width={220} />
               <View style={styles.logoSpacer} />
               <Text style={[styles.description, { color: colors.textSecondary }]}>
-                Sign in to manage your access
+                Sign in to manage your doors
               </Text>
             </View>
 

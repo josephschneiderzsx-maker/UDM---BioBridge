@@ -51,7 +51,6 @@ export default function DoorControlScreen({ route, navigation }) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [licenseStatus, setLicenseStatus] = useState(null);
   const [notifyEnabled, setNotifyEnabled] = useState(false);
-  const [notifyLoading, setNotifyLoading] = useState(false);
 
   const scaleAnim = useRef(new Animated.Value(0.96)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -137,7 +136,17 @@ export default function DoorControlScreen({ route, navigation }) {
           setLicenseStatus(null);
         }
       };
+      const loadNotificationPref = async () => {
+        try {
+          const prefs = await api.getNotificationPreferences();
+          const pref = prefs.find(p => p.door_id === door.id);
+          setNotifyEnabled(pref ? (pref.notify_on_open || pref.notify_on_close || pref.notify_on_forced) : false);
+        } catch {
+          setNotifyEnabled(false);
+        }
+      };
       loadLicenseStatus();
+      loadNotificationPref();
     });
     return unsubscribe;
   }, [navigation]);
@@ -358,18 +367,8 @@ export default function DoorControlScreen({ route, navigation }) {
     }
   };
 
-  const toggleNotifications = async () => {
-    setNotifyLoading(true);
-    try {
-      const newState = !notifyEnabled;
-      await api.setNotificationPreference(door.id, newState, newState, newState);
-      setNotifyEnabled(newState);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error) {
-      Alert.alert('Error', error.message);
-    } finally {
-      setNotifyLoading(false);
-    }
+  const openNotificationSettings = () => {
+    navigation.navigate('NotificationSettings', { door });
   };
 
   const isUnlocked = status.toLowerCase() === 'unlocked' || status.toLowerCase() === 'open';
@@ -579,8 +578,8 @@ export default function DoorControlScreen({ route, navigation }) {
 
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={toggleNotifications}
-            disabled={notifyLoading}
+            onPress={openNotificationSettings}
+            disabled={loading}
             activeOpacity={0.7}
           >
             {notifyEnabled ? (

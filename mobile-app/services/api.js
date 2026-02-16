@@ -567,14 +567,18 @@ class ApiService {
     return data.preferences || [];
   }
 
-  async setNotificationPreference(doorId, notifyOnOpen, notifyOnClose, notifyOnForced) {
+  async setNotificationPreference(doorId, notifyOnOpen, notifyOnClose, notifyOnForced, notifyEventTypes = null) {
     await this.initialize();
     if (!this.baseUrl || !this.token || !this.tenant) throw new Error('Not authenticated');
     const url = `${this.baseUrl}/${this.tenant}/notifications`;
+    const body = { door_id: doorId, notify_on_open: notifyOnOpen, notify_on_close: notifyOnClose, notify_on_forced: notifyOnForced };
+    if (notifyEventTypes !== null) {
+      body.notify_event_types = notifyEventTypes;
+    }
     const response = await fetch(url, {
       method: 'PUT',
       headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ door_id: doorId, notify_on_open: notifyOnOpen, notify_on_close: notifyOnClose, notify_on_forced: notifyOnForced }),
+      body: JSON.stringify(body),
     });
     if (!response.ok) {
       await this._throwIfNotOk(response, 'Failed to update notification preferences');

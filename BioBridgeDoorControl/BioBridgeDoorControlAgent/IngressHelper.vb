@@ -22,10 +22,12 @@ Public Class IngressHelper
                 conn.Open()
                 Dim sql = "SELECT el.id, el.serialno, el.eventType, el.eventtime, el.userid, " &
                           "d.ipaddress, d.Port, " &
-                          "COALESCE(eld.description, CONCAT('Event type ', el.eventType)) AS description " &
+                          "COALESCE(eld.description, CONCAT('Event type ', el.eventType)) AS description, " &
+                          "u.username " &
                           "FROM door_eventlog el " &
                           "LEFT JOIN device d ON d.serialno = el.serialno " &
                           "LEFT JOIN door_eventlog_description eld ON eld.eventtype = CAST(el.eventType AS UNSIGNED) " &
+                          "LEFT JOIN user u ON u.userid = el.userid " &
                           "WHERE el.id > @lastId " &
                           "ORDER BY el.id ASC " &
                           "LIMIT 100"
@@ -42,6 +44,7 @@ Public Class IngressHelper
                             If Not rdr.IsDBNull(5) Then ev.DeviceIP = rdr.GetString(5)
                             If Not rdr.IsDBNull(6) Then ev.DevicePort = rdr.GetInt32(6)
                             If Not rdr.IsDBNull(7) Then ev.Description = rdr.GetString(7)
+                            If Not rdr.IsDBNull(8) Then ev.UserName = rdr.GetString(8)
                             events.Add(ev)
 
                             ' Track highest ID for next sync
@@ -72,7 +75,7 @@ Public Class IngressHelper
         Try
             Using conn As New MySqlConnection(_connectionString)
                 conn.Open()
-                Dim sql = "SELECT d.DeviceName, d.ipaddress, d.Port, dr.name AS door_name " &
+                Dim sql = "SELECT d.DeviceName, d.ipaddress, d.Port, dr.name AS door_name, d.serialno " &
                           "FROM door_device dd " &
                           "INNER JOIN device d ON d.iddevice = dd.idDevice " &
                           "LEFT JOIN door dr ON dr.iddoor = dd.idDoor " &
@@ -85,6 +88,7 @@ Public Class IngressHelper
                             If Not rdr.IsDBNull(1) Then dev.IPAddress = rdr.GetString(1)
                             If Not rdr.IsDBNull(2) Then dev.Port = rdr.GetInt32(2)
                             If Not rdr.IsDBNull(3) Then dev.DoorName = rdr.GetString(3)
+                            If Not rdr.IsDBNull(4) Then dev.SerialNo = rdr.GetString(4)
                             If Not String.IsNullOrEmpty(dev.IPAddress) Then
                                 devices.Add(dev)
                             End If
@@ -106,6 +110,7 @@ Public Class IngressHelper
         Public Property DoorName As String
         Public Property IPAddress As String
         Public Property Port As Integer = 4370
+        Public Property SerialNo As String
     End Class
 
     Public Class IngressEvent
@@ -114,6 +119,7 @@ Public Class IngressHelper
         Public Property EventType As String
         Public Property EventTime As DateTime
         Public Property UserId As String
+        Public Property UserName As String
         Public Property DeviceIP As String
         Public Property DevicePort As Integer
         Public Property Description As String

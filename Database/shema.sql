@@ -102,6 +102,7 @@ CREATE TABLE `doors` (
   `name`          varchar(255) NOT NULL,
   `terminal_ip`   varchar(45)  NOT NULL,   -- IPv6-ready (was varchar(15))
   `terminal_port` int          NOT NULL DEFAULT 4370,
+  `serial_no`     varchar(50)  DEFAULT NULL,
   `default_delay` int          NOT NULL DEFAULT 3000,
   `created_at`    datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `is_active`     tinyint(1)   NOT NULL DEFAULT 1,
@@ -112,6 +113,8 @@ CREATE TABLE `doors` (
   KEY `idx_doors_agent_active` (`agent_id`, `is_active`),
   -- Ingress IP matching: WHERE enterprise_id = @ent AND terminal_ip = @ip AND is_active = 1
   KEY `idx_doors_enterprise_ip` (`enterprise_id`, `terminal_ip`, `is_active`),
+  -- Ingress serial_no matching: WHERE enterprise_id = @ent AND serial_no = @sn AND is_active = 1
+  KEY `idx_doors_enterprise_serial` (`enterprise_id`, `serial_no`, `is_active`),
   CONSTRAINT `fk_doors_agent` FOREIGN KEY (`agent_id`) REFERENCES `agents` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_doors_enterprise` FOREIGN KEY (`enterprise_id`) REFERENCES `enterprises` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -180,6 +183,8 @@ CREATE TABLE `door_events` (
   `event_type`       varchar(50) NOT NULL,
   `event_data`       text,
   `created_at`       datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `event_time`       datetime    DEFAULT NULL,
+  `ingress_user_id`  varchar(50) DEFAULT NULL,
   `ingress_event_id` int         DEFAULT NULL,
   `source`           varchar(20) NOT NULL DEFAULT 'command',
   PRIMARY KEY (`id`),
@@ -209,6 +214,7 @@ CREATE TABLE `notification_preferences` (
   `notify_on_open`  tinyint(1) NOT NULL DEFAULT 1,
   `notify_on_close` tinyint(1) NOT NULL DEFAULT 0,
   `notify_on_forced` tinyint(1) NOT NULL DEFAULT 1,
+  `notify_event_types` text    DEFAULT NULL,
   `created_at`      datetime   NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at`      datetime   NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

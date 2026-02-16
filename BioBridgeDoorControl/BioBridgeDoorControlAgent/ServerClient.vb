@@ -194,6 +194,9 @@ Public Class ServerClient
                 json.Append("{""name"":""").Append(displayName.Replace("""", "\""")).Append("""")
                 json.Append(",""terminal_ip"":""").Append(dev.IPAddress).Append("""")
                 json.Append(",""terminal_port"":").Append(dev.Port)
+                If Not String.IsNullOrEmpty(dev.SerialNo) Then
+                    json.Append(",""serial_no"":""").Append(dev.SerialNo.Replace("""", "\""")).Append("""")
+                End If
                 json.Append("}")
             Next
             json.Append("]}")
@@ -223,6 +226,18 @@ Public Class ServerClient
                 json.Append(",""event_type"":""").Append(If(String.IsNullOrEmpty(ev.EventType), "ingress_event", ev.EventType.Replace("""", "\"""))).Append("""")
                 json.Append(",""device_ip"":""").Append(If(String.IsNullOrEmpty(ev.DeviceIP), "", ev.DeviceIP)).Append("""")
                 json.Append(",""description"":""").Append(If(String.IsNullOrEmpty(ev.Description), "", ev.Description.Replace("""", "\"""))).Append("""")
+                If Not String.IsNullOrEmpty(ev.SerialNo) Then
+                    json.Append(",""serial_no"":""").Append(ev.SerialNo.Replace("""", "\""")).Append("""")
+                End If
+                If ev.EventTime <> DateTime.MinValue Then
+                    json.Append(",""event_time"":""").Append(ev.EventTime.ToString("yyyy-MM-ddTHH:mm:ss")).Append("""")
+                End If
+                If Not String.IsNullOrEmpty(ev.UserId) Then
+                    json.Append(",""userid"":""").Append(ev.UserId.Replace("""", "\""")).Append("""")
+                End If
+                If Not String.IsNullOrEmpty(ev.UserName) Then
+                    json.Append(",""username"":""").Append(ev.UserName.Replace("""", "\""")).Append("""")
+                End If
                 json.Append("}")
             Next
             json.Append("]}")

@@ -886,6 +886,12 @@ Public Class Service1
             End If
             json.Append(",""source"":""").Append(EscapeJsonString(ev.Source)).Append("""")
             json.Append(",""created_at"":""").Append(ev.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")).Append("""")
+            If ev.EventTime.HasValue Then
+                json.Append(",""event_time"":""").Append(ev.EventTime.Value.ToString("yyyy-MM-ddTHH:mm:ss")).Append("""")
+            End If
+            If Not String.IsNullOrEmpty(ev.IngressUserId) Then
+                json.Append(",""ingress_user_id"":""").Append(EscapeJsonString(ev.IngressUserId)).Append("""")
+            End If
             json.Append("}")
         Next
         json.Append("]}")
@@ -913,6 +919,9 @@ Public Class Service1
                 json.Append(",""notify_on_open"":").Append(If(p.NotifyOnOpen, "true", "false"))
                 json.Append(",""notify_on_close"":").Append(If(p.NotifyOnClose, "true", "false"))
                 json.Append(",""notify_on_forced"":").Append(If(p.NotifyOnForced, "true", "false"))
+                If Not String.IsNullOrEmpty(p.NotifyEventTypes) Then
+                    json.Append(",""notify_event_types"":""").Append(EscapeJsonString(p.NotifyEventTypes)).Append("""")
+                End If
                 json.Append("}")
             Next
             json.Append("]}")
@@ -934,7 +943,8 @@ Public Class Service1
             Dim notifyOpen = (ExtractJsonBoolean(body, "notify_on_open") = "true")
             Dim notifyClose = (ExtractJsonBoolean(body, "notify_on_close") = "true")
             Dim notifyForced = (ExtractJsonBoolean(body, "notify_on_forced") = "true")
-            db.SetNotificationPreference(userId, doorId, notifyOpen, notifyClose, notifyForced)
+            Dim notifyEventTypes = ExtractJsonString(body, "notify_event_types")
+            db.SetNotificationPreference(userId, doorId, notifyOpen, notifyClose, notifyForced, notifyEventTypes)
             response.StatusCode = 200
             SendJsonResponse(response, "{""success"":true,""message"":""Notification preferences updated""}")
             Return
@@ -1893,7 +1903,7 @@ Public Class Service1
         End If
         Dim enterpriseId As Integer = enterpriseIdOpt.Value
 
-        ' Parse events array: {"events":[{"ingress_id":1,"event_type":"door_open","event_time":"...","device_ip":"...","description":"..."},...]}
+        ' Parse events array: {"events":[{"ingress_id":1,"event_type":"...","device_ip":"...","description":"...","serial_no":"...","event_time":"...","userid":"..."},...]}
         Dim inserted As Integer = 0
 
         ' Pre-fetch door IDs for this agent (used when device_ip is empty)
@@ -1914,6 +1924,10 @@ Public Class Service1
                 Dim deviceIp = ExtractJsonString(objJson, "device_ip")
                 Dim eventType = ExtractJsonString(objJson, "event_type")
                 Dim description = ExtractJsonString(objJson, "description")
+                Dim serialNo = ExtractJsonString(objJson, "serial_no")
+                Dim eventTimeStr = ExtractJsonString(objJson, "event_time")
+                Dim ingressUserIdVal = ExtractJsonString(objJson, "userid")
+                Dim ingressUserName = ExtractJsonString(objJson, "username")
                 Dim ingressIdStr = ExtractJsonNumber(objJson, "ingress_id")
 
                 Dim ingressId As Integer? = Nothing
@@ -1922,25 +1936,41 @@ Public Class Service1
                     If Integer.TryParse(ingressIdStr, iid) Then ingressId = iid
                 End If
 
-                Dim evType As String = If(String.IsNullOrEmpty(eventType), "ingress_event", eventType)
+                ' Parse event_time from ingress
+                Dim eventTime As DateTime? = Nothing
+                If Not String.IsNullOrEmpty(eventTimeStr) Then
+                    Dim dt As DateTime
+                    If DateTime.TryParse(eventTimeStr, dt) Then eventTime = dt
+                End If
+
+                ' Use description as event_type (human-readable like "Exit Button" instead of raw code "53")
+                Dim evType As String = If(Not String.IsNullOrEmpty(description), description, If(String.IsNullOrEmpty(eventType), "ingress_event", eventType))
+                ' Store raw event code in event_data for client-side icon matching
+                Dim evData As String = If(Not String.IsNullOrEmpty(eventType), eventType, Nothing)
+                ' Prefer username over raw userid for display
+                Dim displayUser As String = If(Not String.IsNullOrEmpty(ingressUserName), ingressUserName, ingressUserIdVal)
+
+                ' Door mapping priority: (1) device_ip match, (2) serial_no match, (3) agent fallback
+                Dim doorIdResolved As Integer? = Nothing
 
                 If Not String.IsNullOrEmpty(deviceIp) Then
-                    ' Map device_ip to door_id
-                    Dim doorIdOpt As Integer? = db.GetDoorIdByTerminalIP(enterpriseId, deviceIp)
-                    If doorIdOpt.HasValue Then
-                        db.InsertDoorEvent(doorIdOpt.Value, evType, description, Nothing, agentId, "ingress", ingressId)
-                        inserted += 1
-                    Else
-                        CreateLog("Agent ingress - No door found for IP: " & deviceIp)
-                    End If
-                ElseIf agentDoorIds.Count = 1 Then
-                    ' Empty device_ip but agent has exactly one door: assign to it
-                    db.InsertDoorEvent(agentDoorIds(0), evType, description, Nothing, agentId, "ingress", ingressId)
+                    doorIdResolved = db.GetDoorIdByTerminalIP(enterpriseId, deviceIp)
+                End If
+
+                If Not doorIdResolved.HasValue AndAlso Not String.IsNullOrEmpty(serialNo) Then
+                    doorIdResolved = db.GetDoorIdBySerialNo(enterpriseId, serialNo)
+                End If
+
+                If Not doorIdResolved.HasValue AndAlso agentDoorIds.Count >= 1 Then
+                    ' Fallback: assign to first agent door (best effort)
+                    doorIdResolved = agentDoorIds(0)
+                End If
+
+                If doorIdResolved.HasValue Then
+                    db.InsertDoorEvent(doorIdResolved.Value, evType, evData, Nothing, agentId, "ingress", ingressId, eventTime, displayUser)
                     inserted += 1
-                ElseIf agentDoorIds.Count > 1 Then
-                    ' Empty device_ip with multiple doors: assign to first door (best effort)
-                    db.InsertDoorEvent(agentDoorIds(0), evType, description, Nothing, agentId, "ingress", ingressId)
-                    inserted += 1
+                Else
+                    CreateLog("Agent ingress - No door found for IP=" & If(deviceIp, "") & " SN=" & If(serialNo, ""))
                 End If
 
                 idx = objEnd + 1
@@ -2071,6 +2101,7 @@ Public Class Service1
                 Dim doorName = ExtractJsonString(objJson, "name")
                 Dim terminalIp = ExtractJsonString(objJson, "terminal_ip")
                 Dim portStr = ExtractJsonNumber(objJson, "terminal_port")
+                Dim serialNo = ExtractJsonString(objJson, "serial_no")
                 Dim terminalPort As Integer = 4370
                 If Not String.IsNullOrEmpty(portStr) Then Integer.TryParse(portStr, terminalPort)
                 If String.IsNullOrEmpty(doorName) Then doorName = "Door " & terminalIp
@@ -2079,12 +2110,16 @@ Public Class Service1
                     ' Check if already exists as a door
                     Dim existingDoorId As Integer? = db.GetDoorIdByTerminalIP(enterpriseId, terminalIp)
                     If existingDoorId.HasValue Then
+                        ' Update serial_no on existing door if we have it
+                        If Not String.IsNullOrEmpty(serialNo) Then
+                            db.CreateDoorIfNotExists(enterpriseId, agentId, doorName, terminalIp, terminalPort, serialNo)
+                        End If
                         existing += 1
                     Else
                         ' Quota available? Auto-create. Otherwise store as pending for admin approval.
                         If currentCount + created < maxQuota Then
                             Try
-                                db.CreateDoorIfNotExists(enterpriseId, agentId, doorName, terminalIp, terminalPort)
+                                db.CreateDoorIfNotExists(enterpriseId, agentId, doorName, terminalIp, terminalPort, serialNo)
                                 created += 1
                                 CreateLog("Agent discovered-doors - Auto-created door: " & doorName & " (" & terminalIp & ":" & terminalPort & ")")
                             Catch ex As Exception

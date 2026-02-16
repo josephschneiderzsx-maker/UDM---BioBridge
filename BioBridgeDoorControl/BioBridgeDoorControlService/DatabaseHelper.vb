@@ -436,29 +436,26 @@ Public Class DatabaseHelper
     Public Function GetDoorEvents(enterpriseId As Integer, userId As Integer, isAdmin As Boolean, Optional doorId As Integer? = Nothing, Optional limit As Integer = 50) As List(Of DoorEventInfo)
         Dim events As New List(Of DoorEventInfo)()
         Using conn = GetConnection()
+            Dim cols = "de.id, de.door_id, d.name, de.event_type, de.event_data, de.created_at, de.source, de.event_time, de.ingress_user_id"
             Dim sql As String
             If isAdmin Then
                 If doorId.HasValue Then
-                    sql = "SELECT de.id, de.door_id, d.name, de.event_type, de.event_data, de.created_at, de.source " &
-                          "FROM door_events de INNER JOIN doors d ON d.id = de.door_id " &
+                    sql = "SELECT " & cols & " FROM door_events de INNER JOIN doors d ON d.id = de.door_id " &
                           "WHERE d.enterprise_id = @ent AND de.door_id = @did " &
                           "ORDER BY de.created_at DESC LIMIT @limit"
                 Else
-                    sql = "SELECT de.id, de.door_id, d.name, de.event_type, de.event_data, de.created_at, de.source " &
-                          "FROM door_events de INNER JOIN doors d ON d.id = de.door_id " &
+                    sql = "SELECT " & cols & " FROM door_events de INNER JOIN doors d ON d.id = de.door_id " &
                           "WHERE d.enterprise_id = @ent " &
                           "ORDER BY de.created_at DESC LIMIT @limit"
                 End If
             Else
                 If doorId.HasValue Then
-                    sql = "SELECT de.id, de.door_id, d.name, de.event_type, de.event_data, de.created_at, de.source " &
-                          "FROM door_events de INNER JOIN doors d ON d.id = de.door_id " &
+                    sql = "SELECT " & cols & " FROM door_events de INNER JOIN doors d ON d.id = de.door_id " &
                           "INNER JOIN user_door_permissions udp ON udp.door_id = d.id AND udp.user_id = @uid " &
                           "WHERE d.enterprise_id = @ent AND de.door_id = @did " &
                           "ORDER BY de.created_at DESC LIMIT @limit"
                 Else
-                    sql = "SELECT de.id, de.door_id, d.name, de.event_type, de.event_data, de.created_at, de.source " &
-                          "FROM door_events de INNER JOIN doors d ON d.id = de.door_id " &
+                    sql = "SELECT " & cols & " FROM door_events de INNER JOIN doors d ON d.id = de.door_id " &
                           "INNER JOIN user_door_permissions udp ON udp.door_id = d.id AND udp.user_id = @uid " &
                           "WHERE d.enterprise_id = @ent " &
                           "ORDER BY de.created_at DESC LIMIT @limit"
@@ -480,6 +477,8 @@ Public Class DatabaseHelper
                         If Not rdr.IsDBNull(4) Then ev.EventData = rdr.GetString(4)
                         ev.CreatedAt = rdr.GetDateTime(5)
                         If Not rdr.IsDBNull(6) Then ev.Source = rdr.GetString(6) Else ev.Source = "command"
+                        If Not rdr.IsDBNull(7) Then ev.EventTime = rdr.GetDateTime(7)
+                        If Not rdr.IsDBNull(8) Then ev.IngressUserId = rdr.GetString(8)
                         events.Add(ev)
                     End While
                 End Using
@@ -512,25 +511,52 @@ Public Class DatabaseHelper
         End Using
     End Function
 
+    Public Function GetDoorIdBySerialNo(enterpriseId As Integer, serialNo As String) As Integer?
+        If String.IsNullOrEmpty(serialNo) Then Return Nothing
+        Using conn = GetConnection()
+            Using cmd = New MySqlCommand(
+                "SELECT id FROM doors WHERE enterprise_id = @ent AND serial_no = @sn AND is_active = 1 LIMIT 1", conn)
+                cmd.Parameters.AddWithValue("@ent", enterpriseId)
+                cmd.Parameters.AddWithValue("@sn", serialNo)
+                Dim obj = cmd.ExecuteScalar()
+                If obj Is Nothing OrElse obj Is DBNull.Value Then Return Nothing
+                Return CInt(obj)
+            End Using
+        End Using
+    End Function
+
     ''' <summary>
     ''' Create a door if it doesn't already exist (matched by terminal_ip within the enterprise).
     ''' Returns the door ID (existing or newly created).
     ''' </summary>
-    Public Function CreateDoorIfNotExists(enterpriseId As Integer, agentId As Integer, name As String, terminalIp As String, terminalPort As Integer) As Integer
-        ' Check if door already exists
+    Public Function CreateDoorIfNotExists(enterpriseId As Integer, agentId As Integer, name As String, terminalIp As String, terminalPort As Integer, Optional serialNo As String = Nothing) As Integer
+        ' Check if door already exists by IP
         Dim existingId As Integer? = GetDoorIdByTerminalIP(enterpriseId, terminalIp)
-        If existingId.HasValue Then Return existingId.Value
+        If existingId.HasValue Then
+            ' Update serial_no if we now have it and door doesn't yet
+            If Not String.IsNullOrEmpty(serialNo) Then
+                Using conn = GetConnection()
+                    Using cmd = New MySqlCommand("UPDATE doors SET serial_no = @sn WHERE id = @id AND (serial_no IS NULL OR serial_no = '')", conn)
+                        cmd.Parameters.AddWithValue("@sn", serialNo)
+                        cmd.Parameters.AddWithValue("@id", existingId.Value)
+                        cmd.ExecuteNonQuery()
+                    End Using
+                End Using
+            End If
+            Return existingId.Value
+        End If
 
         ' Create new door
         Using conn = GetConnection()
-            Dim sql = "INSERT INTO doors (enterprise_id, agent_id, name, terminal_ip, terminal_port, default_delay, is_active, created_at) " &
-                      "VALUES (@ent, @aid, @name, @ip, @port, 3000, 1, NOW())"
+            Dim sql = "INSERT INTO doors (enterprise_id, agent_id, name, terminal_ip, terminal_port, serial_no, default_delay, is_active, created_at) " &
+                      "VALUES (@ent, @aid, @name, @ip, @port, @sn, 3000, 1, NOW())"
             Using cmd = New MySqlCommand(sql, conn)
                 cmd.Parameters.AddWithValue("@ent", enterpriseId)
                 cmd.Parameters.AddWithValue("@aid", agentId)
                 cmd.Parameters.AddWithValue("@name", name)
                 cmd.Parameters.AddWithValue("@ip", terminalIp)
                 cmd.Parameters.AddWithValue("@port", terminalPort)
+                If String.IsNullOrEmpty(serialNo) Then cmd.Parameters.AddWithValue("@sn", DBNull.Value) Else cmd.Parameters.AddWithValue("@sn", serialNo)
                 cmd.ExecuteNonQuery()
                 Return CInt(cmd.LastInsertedId)
             End Using
@@ -632,10 +658,10 @@ Public Class DatabaseHelper
         Public Property DiscoveredAt As DateTime
     End Class
 
-    Public Sub InsertDoorEvent(doorId As Integer, eventType As String, eventData As String, Optional userId As Integer? = Nothing, Optional agentId As Integer? = Nothing, Optional source As String = "command", Optional ingressEventId As Integer? = Nothing)
+    Public Sub InsertDoorEvent(doorId As Integer, eventType As String, eventData As String, Optional userId As Integer? = Nothing, Optional agentId As Integer? = Nothing, Optional source As String = "command", Optional ingressEventId As Integer? = Nothing, Optional eventTime As DateTime? = Nothing, Optional ingressUserId As String = Nothing)
         Using conn = GetConnection()
-            Dim sql = "INSERT INTO door_events (door_id, user_id, agent_id, event_type, event_data, source, ingress_event_id) " &
-                      "VALUES (@did, @uid, @aid, @type, @data, @source, @ingId)"
+            Dim sql = "INSERT INTO door_events (door_id, user_id, agent_id, event_type, event_data, source, ingress_event_id, created_at, event_time, ingress_user_id) " &
+                      "VALUES (@did, @uid, @aid, @type, @data, @source, @ingId, COALESCE(@et, NOW()), @et, @iuid)"
             Using cmd = New MySqlCommand(sql, conn)
                 cmd.Parameters.AddWithValue("@did", doorId)
                 If userId.HasValue Then cmd.Parameters.AddWithValue("@uid", userId.Value) Else cmd.Parameters.AddWithValue("@uid", DBNull.Value)
@@ -644,6 +670,8 @@ Public Class DatabaseHelper
                 cmd.Parameters.AddWithValue("@data", If(String.IsNullOrEmpty(eventData), DBNull.Value, CObj(eventData)))
                 cmd.Parameters.AddWithValue("@source", source)
                 If ingressEventId.HasValue Then cmd.Parameters.AddWithValue("@ingId", ingressEventId.Value) Else cmd.Parameters.AddWithValue("@ingId", DBNull.Value)
+                If eventTime.HasValue Then cmd.Parameters.AddWithValue("@et", eventTime.Value) Else cmd.Parameters.AddWithValue("@et", DBNull.Value)
+                If String.IsNullOrEmpty(ingressUserId) Then cmd.Parameters.AddWithValue("@iuid", DBNull.Value) Else cmd.Parameters.AddWithValue("@iuid", ingressUserId)
                 cmd.ExecuteNonQuery()
             End Using
         End Using
@@ -654,7 +682,7 @@ Public Class DatabaseHelper
         Dim prefs As New List(Of NotificationPreference)()
         Using conn = GetConnection()
             Using cmd = New MySqlCommand(
-                "SELECT np.door_id, d.name, np.notify_on_open, np.notify_on_close, np.notify_on_forced " &
+                "SELECT np.door_id, d.name, np.notify_on_open, np.notify_on_close, np.notify_on_forced, np.notify_event_types " &
                 "FROM notification_preferences np " &
                 "INNER JOIN doors d ON d.id = np.door_id AND d.is_active = 1 " &
                 "WHERE np.user_id = @uid ORDER BY d.name", conn)
@@ -667,6 +695,7 @@ Public Class DatabaseHelper
                         p.NotifyOnOpen = rdr.GetBoolean(2)
                         p.NotifyOnClose = rdr.GetBoolean(3)
                         p.NotifyOnForced = rdr.GetBoolean(4)
+                        If Not rdr.IsDBNull(5) Then p.NotifyEventTypes = rdr.GetString(5)
                         prefs.Add(p)
                     End While
                 End Using
@@ -675,17 +704,18 @@ Public Class DatabaseHelper
         Return prefs
     End Function
 
-    Public Sub SetNotificationPreference(userId As Integer, doorId As Integer, notifyOnOpen As Boolean, notifyOnClose As Boolean, notifyOnForced As Boolean)
+    Public Sub SetNotificationPreference(userId As Integer, doorId As Integer, notifyOnOpen As Boolean, notifyOnClose As Boolean, notifyOnForced As Boolean, Optional notifyEventTypes As String = Nothing)
         Using conn = GetConnection()
-            Dim sql = "INSERT INTO notification_preferences (user_id, door_id, notify_on_open, notify_on_close, notify_on_forced) " &
-                      "VALUES (@uid, @did, @open, @close, @forced) " &
-                      "ON DUPLICATE KEY UPDATE notify_on_open = @open, notify_on_close = @close, notify_on_forced = @forced"
+            Dim sql = "INSERT INTO notification_preferences (user_id, door_id, notify_on_open, notify_on_close, notify_on_forced, notify_event_types) " &
+                      "VALUES (@uid, @did, @open, @close, @forced, @evTypes) " &
+                      "ON DUPLICATE KEY UPDATE notify_on_open = @open, notify_on_close = @close, notify_on_forced = @forced, notify_event_types = @evTypes"
             Using cmd = New MySqlCommand(sql, conn)
                 cmd.Parameters.AddWithValue("@uid", userId)
                 cmd.Parameters.AddWithValue("@did", doorId)
                 cmd.Parameters.AddWithValue("@open", notifyOnOpen)
                 cmd.Parameters.AddWithValue("@close", notifyOnClose)
                 cmd.Parameters.AddWithValue("@forced", notifyOnForced)
+                If String.IsNullOrEmpty(notifyEventTypes) Then cmd.Parameters.AddWithValue("@evTypes", DBNull.Value) Else cmd.Parameters.AddWithValue("@evTypes", notifyEventTypes)
                 cmd.ExecuteNonQuery()
             End Using
         End Using
@@ -715,6 +745,8 @@ Public Class DatabaseHelper
         Public Property EventData As String
         Public Property CreatedAt As DateTime
         Public Property Source As String
+        Public Property EventTime As DateTime?
+        Public Property IngressUserId As String
     End Class
 
     Public Class NotificationPreference
@@ -723,6 +755,7 @@ Public Class DatabaseHelper
         Public Property NotifyOnOpen As Boolean
         Public Property NotifyOnClose As Boolean
         Public Property NotifyOnForced As Boolean
+        Public Property NotifyEventTypes As String
     End Class
 
     Public Class DoorInfo
