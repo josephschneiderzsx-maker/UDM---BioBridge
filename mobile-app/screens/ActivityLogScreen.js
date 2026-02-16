@@ -13,6 +13,7 @@ import {
   Modal,
   Pressable,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ChevronLeft, LogIn, LogOut, Activity, AlertTriangle, Clock, Shield, ShieldX,
@@ -24,6 +25,8 @@ import { useTheme } from '../contexts/ThemeContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HEADER_TOP_PADDING = Math.max(spacing.xl, SCREEN_HEIGHT * 0.02) + (Platform.OS === 'android' ? 10 : 0);
+const FLOATING_HEADER_HEIGHT_ACTIVITY = 120;
+const TAB_BAR_PADDING_BOTTOM = 100;
 
 // ──────────────────────────────────────────────
 // Event type code → description map (fallback for legacy DB records)
@@ -230,55 +233,53 @@ function EventDetailModal({ event, visible, onClose, colors }) {
         style={[
           modalStyles.sheet,
           {
-            backgroundColor: colors.surfaceElevated,
             transform: [{ translateY: slideAnim }],
             opacity: fadeAnim,
           },
         ]}
       >
-        {/* Drag handle */}
-        <View style={modalStyles.dragHandle}>
-          <View style={[modalStyles.handle, { backgroundColor: colors.fillSecondary }]} />
-        </View>
-
-        {/* Event icon + title */}
-        <View style={modalStyles.heroSection}>
-          <View style={[modalStyles.heroIcon, { backgroundColor: bg }]}>
-            <Icon size={28} color={color} strokeWidth={2} />
+        <BlurView intensity={80} tint="light" style={modalStyles.sheetBlur} />
+        <View style={modalStyles.sheetContent}>
+          <View style={modalStyles.dragHandle}>
+            <View style={[modalStyles.handle, { backgroundColor: colors.fillSecondary }]} />
           </View>
-          <Text style={[modalStyles.heroTitle, { color: colors.textPrimary }]}>{label}</Text>
-          <Text style={[modalStyles.heroTime, { color: colors.textTertiary }]}>{timeAgo(ts)}</Text>
-        </View>
 
-        {/* Details */}
-        <View style={[modalStyles.detailsCard, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
-          <DetailRow icon={MapPin} iconColor={colors.primary} title="Door" value={event.door_name || 'Unknown'} />
-          <View style={[modalStyles.detailDivider, { backgroundColor: colors.separator }]} />
-          <DetailRow icon={Calendar} title="Date & Time" value={formatFullDate(ts)} />
-          {event.ingress_user_id ? (
-            <>
-              <View style={[modalStyles.detailDivider, { backgroundColor: colors.separator }]} />
-              <DetailRow icon={User} iconColor={accent} title="User" value={event.ingress_user_id} />
-            </>
-          ) : null}
-          {event.event_data ? (
-            <>
-              <View style={[modalStyles.detailDivider, { backgroundColor: colors.separator }]} />
-              <DetailRow icon={Hash} title="Event Code" value={event.event_data} />
-            </>
-          ) : null}
-          <View style={[modalStyles.detailDivider, { backgroundColor: colors.separator }]} />
-          <DetailRow icon={Info} title="Source" value={event.source === 'ingress' ? 'Access Control' : event.source || 'System'} />
-        </View>
+          <View style={modalStyles.heroSection}>
+            <View style={[modalStyles.heroIcon, { backgroundColor: bg }]}>
+              <Icon size={28} color={color} strokeWidth={2} />
+            </View>
+            <Text style={[modalStyles.heroTitle, { color: colors.textPrimary }]}>{label}</Text>
+            <Text style={[modalStyles.heroTime, { color: colors.textTertiary }]}>{timeAgo(ts)}</Text>
+          </View>
 
-        {/* Close button */}
-        <TouchableOpacity
-          style={[modalStyles.closeBtn, { backgroundColor: colors.fillTertiary }]}
-          onPress={handleClose}
-          activeOpacity={0.7}
-        >
-          <Text style={[modalStyles.closeBtnText, { color: colors.textPrimary }]}>Close</Text>
-        </TouchableOpacity>
+          <View style={[modalStyles.detailsCard, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
+            <DetailRow icon={MapPin} iconColor={colors.primary} title="Door" value={event.door_name || 'Unknown'} />
+            <View style={[modalStyles.detailDivider, { backgroundColor: colors.separator }]} />
+            <DetailRow icon={Calendar} title="Date & Time" value={formatFullDate(ts)} />
+            {event.ingress_user_id ? (
+              <>
+                <View style={[modalStyles.detailDivider, { backgroundColor: colors.separator }]} />
+                <DetailRow icon={User} iconColor={accent} title="Utilisateur" value={event.ingress_user_id} />
+              </>
+            ) : null}
+            {event.event_data ? (
+              <>
+                <View style={[modalStyles.detailDivider, { backgroundColor: colors.separator }]} />
+                <DetailRow icon={Hash} title="Event Code" value={event.event_data} />
+              </>
+            ) : null}
+            <View style={[modalStyles.detailDivider, { backgroundColor: colors.separator }]} />
+            <DetailRow icon={Info} title="Source" value={event.source === 'ingress' ? 'Access Control' : event.source || 'System'} />
+          </View>
+
+          <TouchableOpacity
+            style={[modalStyles.closeBtn, { backgroundColor: colors.fillTertiary }]}
+            onPress={handleClose}
+            activeOpacity={0.7}
+          >
+            <Text style={[modalStyles.closeBtnText, { color: colors.textPrimary }]}>Close</Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
     </Modal>
   );
@@ -370,66 +371,69 @@ export default function ActivityLogScreen({ route, navigation }) {
   }, [colors]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <Animated.View style={[styles.inner, { opacity: fadeAnim }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-            onPress={() => navigation.goBack()}
-          >
-            <ChevronLeft size={20} color={colors.textSecondary} strokeWidth={2.5} />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={[styles.title, { color: colors.textPrimary }]}>Activity</Text>
-            {doorName && (
-              <Text style={[styles.subtitle, { color: colors.textTertiary }]}>{doorName}</Text>
-            )}
+        <View style={styles.headerFloating}>
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
+              onPress={() => navigation.goBack()}
+            >
+              <ChevronLeft size={20} color={colors.textSecondary} strokeWidth={2.5} />
+            </TouchableOpacity>
+            <View style={styles.headerCenter}>
+              <Text style={[styles.title, { color: colors.textPrimary }]}>Activity</Text>
+              {doorName && (
+                <Text style={[styles.subtitle, { color: colors.textTertiary }]}>{doorName}</Text>
+              )}
+            </View>
+            <View style={{ width: 36 }} />
           </View>
-          <View style={{ width: 36 }} />
         </View>
 
-        {/* Event count pill */}
-        {events.length > 0 && (
-          <View style={styles.countRow}>
-            <View style={[styles.countPill, { backgroundColor: colors.primaryDim }]}>
-              <Text style={[styles.countText, { color: colors.primary }]}>
-                {events.length} event{events.length !== 1 ? 's' : ''}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        <SectionList
-          sections={sections}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderEvent}
-          renderSectionHeader={renderSectionHeader}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => { setRefreshing(true); loadEvents(); }}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          }
-          ListEmptyComponent={
-            !loading && (
-              <View style={styles.emptyContainer}>
-                <View style={[styles.emptyIcon, { backgroundColor: colors.fillTertiary }]}>
-                  <Clock size={32} color={colors.textTertiary} strokeWidth={1.5} />
-                </View>
-                <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>No activity yet</Text>
-                <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
-                  Events will appear here when doors are used
+        <View style={[styles.contentWrap, { paddingTop: FLOATING_HEADER_HEIGHT_ACTIVITY }]}>
+          {events.length > 0 && (
+            <View style={styles.countRow}>
+              <View style={[styles.countPill, { backgroundColor: colors.primaryDim }]}>
+                <Text style={[styles.countText, { color: colors.primary }]}>
+                  {events.length} event{events.length !== 1 ? 's' : ''}
                 </Text>
               </View>
-            )
-          }
-        />
+            </View>
+          )}
+
+          <SectionList
+            sections={sections}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderEvent}
+            renderSectionHeader={renderSectionHeader}
+            contentContainerStyle={[styles.listContent, { paddingBottom: TAB_BAR_PADDING_BOTTOM }]}
+            showsVerticalScrollIndicator={false}
+            stickySectionHeadersEnabled={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => { setRefreshing(true); loadEvents(); }}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
+              />
+            }
+            ListEmptyComponent={
+              !loading && (
+                <View style={styles.emptyContainer}>
+                  <View style={[styles.emptyIcon, { backgroundColor: colors.fillTertiary }]}>
+                    <Clock size={32} color={colors.textTertiary} strokeWidth={1.5} />
+                  </View>
+                  <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>No activity yet</Text>
+                  <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
+                    Events will appear here when doors are used
+                  </Text>
+                </View>
+              )
+            }
+          />
+        </View>
       </Animated.View>
 
       {/* Detail Modal */}
@@ -449,10 +453,27 @@ export default function ActivityLogScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   inner: { flex: 1 },
+  headerFloating: {
+    position: 'absolute',
+    top: 0,
+    left: 20,
+    right: 20,
+    zIndex: 10,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.xl, paddingTop: HEADER_TOP_PADDING, paddingBottom: spacing.sm,
   },
+  contentWrap: { flex: 1 },
   backButton: {
     width: 36, height: 36, borderRadius: 10,
     justifyContent: 'center', alignItems: 'center', borderWidth: 1,
@@ -512,9 +533,18 @@ const modalStyles = StyleSheet.create({
   },
   sheet: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    borderTopLeftRadius: 30, borderTopRightRadius: 30,
+    overflow: 'hidden',
     ...shadows.large,
+  },
+  sheetBlur: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  sheetContent: {
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
   },
   dragHandle: { alignItems: 'center', paddingTop: 10, paddingBottom: 6 },
   handle: { width: 36, height: 4, borderRadius: 2 },

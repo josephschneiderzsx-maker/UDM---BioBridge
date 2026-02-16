@@ -5,9 +5,20 @@ Imports System.Diagnostics
 Public Class IngressHelper
     Private ReadOnly _connectionString As String
     Private _lastSyncId As Integer = 0
+    Private _lastRemoteSyncId As Integer = 0
 
     Public Sub New(connectionString As String)
         _connectionString = connectionString
+    End Sub
+
+    ''' <summary>Update last sync id after successfully sending an event (streaming mode).</summary>
+    Public Sub SetLastSyncId(id As Integer)
+        _lastSyncId = id
+    End Sub
+
+    ''' <summary>Update last remote sync id after successfully sending a remote event.</summary>
+    Public Sub SetLastRemoteSyncId(id As Integer)
+        _lastRemoteSyncId = id
     End Sub
 
     ''' <summary>
@@ -29,8 +40,7 @@ Public Class IngressHelper
                           "LEFT JOIN door_eventlog_description eld ON eld.eventtype = CAST(el.eventType AS UNSIGNED) " &
                           "LEFT JOIN user u ON u.userid = el.userid " &
                           "WHERE el.id > @lastId " &
-                          "ORDER BY el.id ASC " &
-                          "LIMIT 100"
+                          "ORDER BY el.id ASC"
                 Using cmd As New MySqlCommand(sql, conn)
                     cmd.Parameters.AddWithValue("@lastId", _lastSyncId)
                     Using rdr = cmd.ExecuteReader()
@@ -46,11 +56,6 @@ Public Class IngressHelper
                             If Not rdr.IsDBNull(7) Then ev.Description = rdr.GetString(7)
                             If Not rdr.IsDBNull(8) Then ev.UserName = rdr.GetString(8)
                             events.Add(ev)
-
-                            ' Track highest ID for next sync
-                            If ev.IngressId > _lastSyncId Then
-                                _lastSyncId = ev.IngressId
-                            End If
                         End While
                     End Using
                 End Using
@@ -63,6 +68,55 @@ Public Class IngressHelper
             End Try
         End Try
         Return events
+    End Function
+
+    ''' <summary>
+    ''' Get new events from door_eventlog_remote (event types 7, 8, 9).
+    ''' Joins door_device and device to resolve serialno for door mapping.
+    ''' </summary>
+    Public Function GetNewEventsFromRemote() As List(Of IngressEvent)
+        Dim events As New List(Of IngressEvent)()
+        Try
+            Using conn As New MySqlConnection(_connectionString)
+                conn.Open()
+                Dim sql = "SELECT r.id, r.idDoor, r.eventType, r.eventTime, d.serialno " &
+                          "FROM door_eventlog_remote r " &
+                          "LEFT JOIN door_device dd ON dd.idDoor = r.idDoor " &
+                          "LEFT JOIN device d ON d.iddevice = dd.idDevice " &
+                          "WHERE r.id > @lastRemoteId AND r.eventType IN (7, 8, 9) " &
+                          "ORDER BY r.id ASC"
+                Using cmd As New MySqlCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@lastRemoteId", _lastRemoteSyncId)
+                    Using rdr = cmd.ExecuteReader()
+                        While rdr.Read()
+                            Dim ev As New IngressEvent()
+                            ev.IngressId = rdr.GetInt32(0)
+                            If Not rdr.IsDBNull(4) Then ev.SerialNo = rdr.GetString(4)
+                            If Not rdr.IsDBNull(2) Then ev.EventType = rdr.GetString(2)
+                            If Not rdr.IsDBNull(3) Then ev.EventTime = rdr.GetDateTime(3)
+                            ev.Description = GetRemoteEventDescription(ev.EventType)
+                            events.Add(ev)
+                        End While
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            Try
+                EventLog.WriteEntry("UDM-Agent", "IngressHelper.GetNewEventsFromRemote error: " & ex.Message, EventLogEntryType.Warning)
+            Catch
+            End Try
+        End Try
+        Return events
+    End Function
+
+    Private Shared Function GetRemoteEventDescription(eventType As String) As String
+        If String.IsNullOrEmpty(eventType) Then Return "Remote event"
+        Select Case eventType.Trim()
+            Case "7" : Return "Remote Release Alarm"
+            Case "8" : Return "Remote Open Door"
+            Case "9" : Return "Remote Close Door"
+            Case Else : Return "Event type " & eventType
+        End Select
     End Function
 
     ''' <summary>

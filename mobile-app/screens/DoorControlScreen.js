@@ -9,6 +9,7 @@ import {
   Dimensions,
   PanResponder,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Haptics from 'expo-haptics';
@@ -396,24 +397,13 @@ export default function DoorControlScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Animated.View
-        {...panResponder.panHandlers}
-        style={[
-          styles.content,
-          {
-            opacity: opacityAnim,
-            transform: [{ scale: scaleAnim }, { translateY }],
-          },
-        ]}
-      >
-        {/* Drag indicator */}
+      <View style={styles.topBarFloating}>
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={styles.dragIndicator}>
           <View style={[styles.dragHandle, {
             backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
           }]} />
         </View>
-
-        {/* Close */}
         <TouchableOpacity
           style={[styles.closeButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
           onPress={() => navigation.goBack()}
@@ -421,7 +411,19 @@ export default function DoorControlScreen({ route, navigation }) {
         >
           <ChevronDown size={20} color={colors.textTertiary} strokeWidth={2.5} />
         </TouchableOpacity>
+      </View>
 
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={[
+          styles.content,
+          styles.contentWithTopPadding,
+          {
+            opacity: opacityAnim,
+            transform: [{ scale: scaleAnim }, { translateY }],
+          },
+        ]}
+      >
         {/* Door Info */}
         <View style={styles.doorInfo}>
           <Logo width={120} />
@@ -597,18 +599,41 @@ export default function DoorControlScreen({ route, navigation }) {
   );
 }
 
+const TOP_BAR_HEIGHT = 100;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  topBarFloating: {
+    position: 'absolute',
+    top: 0,
+    left: 20,
+    right: 20,
+    zIndex: 10,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+    alignItems: 'center',
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
   },
   content: {
     flex: 1,
     paddingHorizontal: spacing.xl,
   },
+  contentWithTopPadding: {
+    paddingTop: TOP_BAR_HEIGHT,
+  },
   dragIndicator: {
     alignItems: 'center',
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.xs,
   },
   dragHandle: {
     width: 36,
@@ -622,7 +647,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.lg,
     borderWidth: 1,
   },
   doorInfo: {

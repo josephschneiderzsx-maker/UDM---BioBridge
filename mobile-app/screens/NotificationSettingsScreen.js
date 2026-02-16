@@ -12,6 +12,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 import api from '../services/api';
@@ -20,6 +21,8 @@ import { useTheme } from '../contexts/ThemeContext';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HEADER_TOP_PADDING = Math.max(spacing.xl, SCREEN_HEIGHT * 0.02) + (Platform.OS === 'android' ? 10 : 0);
+const FLOATING_HEADER_HEIGHT = 110;
+const TAB_BAR_PADDING_BOTTOM = 100;
 
 const EVENT_TYPES = [
   { group: 'Entry Events', items: [
@@ -157,25 +160,27 @@ export default function NotificationSettingsScreen({ route, navigation }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <Animated.View style={[styles.inner, { opacity: fadeAnim }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-            onPress={() => navigation.goBack()}
-          >
-            <ChevronLeft size={20} color={colors.textSecondary} strokeWidth={2.5} />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={[styles.title, { color: colors.textPrimary }]}>Notifications</Text>
-            <Text style={[styles.subtitle, { color: colors.textTertiary }]}>{door.name}</Text>
+        <View style={styles.headerFloating}>
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
+              onPress={() => navigation.goBack()}
+            >
+              <ChevronLeft size={20} color={colors.textSecondary} strokeWidth={2.5} />
+            </TouchableOpacity>
+            <View style={styles.headerCenter}>
+              <Text style={[styles.title, { color: colors.textPrimary }]}>Notifications</Text>
+              <Text style={[styles.subtitle, { color: colors.textTertiary }]}>{door.name}</Text>
+            </View>
+            <View style={{ width: 36 }} />
           </View>
-          <View style={{ width: 36 }} />
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: FLOATING_HEADER_HEIGHT, paddingBottom: TAB_BAR_PADDING_BOTTOM }]}
           showsVerticalScrollIndicator={false}
         >
           {/* Toggle All */}
@@ -252,6 +257,12 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   inner: { flex: 1 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  headerFloating: {
+    position: 'absolute', top: 0, left: 20, right: 20, zIndex: 10,
+    borderRadius: 30, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25, shadowRadius: 12, elevation: 8,
+  },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.xl, paddingTop: HEADER_TOP_PADDING, paddingBottom: spacing.md,

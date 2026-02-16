@@ -7,12 +7,17 @@ import {
   Alert,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Check, X, Radio } from 'lucide-react-native';
 import api from '../services/api';
 import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
+
+const FLOATING_HEADER_HEIGHT = 120;
+const TAB_BAR_PADDING_BOTTOM = 100;
 
 export default function DiscoveredDevicesScreen({ navigation }) {
   const { colors } = useTheme();
@@ -116,38 +121,43 @@ export default function DiscoveredDevicesScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-          onPress={() => navigation.goBack()}
-        >
-          <ChevronLeft size={20} color={colors.textPrimary} strokeWidth={2.5} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>Detected Doors</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <View style={styles.headerFloating}>
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
+            onPress={() => navigation.goBack()}
+          >
+            <ChevronLeft size={20} color={colors.textPrimary} strokeWidth={2.5} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Detected Doors</Text>
+        </View>
       </View>
 
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        These doors were discovered from Ingress. Choose which ones to add.
-      </Text>
+      <View style={[styles.contentWrap, { paddingTop: FLOATING_HEADER_HEIGHT }]}>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          These doors were discovered from Ingress. Choose which ones to add.
+        </Text>
 
-      {loading ? (
-        <View style={styles.loader}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : devices.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No pending doors to review.</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={devices}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderDevice}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+        {loading ? (
+          <View style={styles.loader}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : devices.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No pending doors to review.</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={devices}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderDevice}
+            contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_PADDING_BOTTOM }]}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -156,6 +166,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  headerFloating: {
+    position: 'absolute',
+    top: 0,
+    left: 20,
+    right: 20,
+    zIndex: 10,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -163,6 +189,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
+  },
+  contentWrap: {
+    flex: 1,
   },
   backButton: {
     width: 36,

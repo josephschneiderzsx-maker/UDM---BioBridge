@@ -150,6 +150,19 @@ CREATE TABLE `door_eventlog` (
   KEY `serialno` (`serialno`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+/*Table structure for table `door_eventlog_remote` (events 7, 8, 9 - remote release/open/close) */
+
+DROP TABLE IF EXISTS `door_eventlog_remote`;
+
+CREATE TABLE `door_eventlog_remote` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `idDoor` int(11) DEFAULT NULL,
+  `eventType` int(11) DEFAULT NULL,
+  `eventTime` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idDoor` (`idDoor`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 /*Table structure for table `door_eventlog_description` */
 
 DROP TABLE IF EXISTS `door_eventlog_description`;

@@ -68,6 +68,7 @@ Public Class Service1
     ' Variables de classe pour le serveur HTTP et SDK
     Private httpListener As HttpListener
     Private httpThread As Thread
+    Private pruneTimer As Threading.Timer
     ' Utiliser BioBridgeSDKDLLv3.dll (assembly .NET) avec Interop.zkemkeeper.dll
     Private axBioBridgeSDK1 As BioBridgeSDKDLL.BioBridgeSDKClass
     Private isRunning As Boolean = False
@@ -110,6 +111,13 @@ Public Class Service1
 
             CreateLog("HTTP Server started on port " & HTTP_PORT)
             CreateLog("Service ready - Endpoints: /open, /close, /status")
+
+            ' Start 72-hour door events pruning (run after 5 min, then every hour)
+            Try
+                pruneTimer = New Threading.Timer(AddressOf PruneDoorEventsTask, Nothing, TimeSpan.FromMinutes(5), TimeSpan.FromHours(1))
+            Catch ex As Exception
+                CreateLog("Could not start prune timer: " & ex.Message)
+            End Try
 
             ' Essayer d'initialiser la connexion BioBridge
             Try
@@ -186,6 +194,12 @@ Public Class Service1
                 httpThread.Join(2000) ' Attendre max 2 secondes
             End If
 
+            If pruneTimer IsNot Nothing Then
+                pruneTimer.Change(Threading.Timeout.Infinite, Threading.Timeout.Infinite)
+                pruneTimer.Dispose()
+                pruneTimer = Nothing
+            End If
+
             ' Déconnecter le SDK
             If axBioBridgeSDK1 IsNot Nothing Then
                 Try
@@ -200,6 +214,14 @@ Public Class Service1
 
         Catch ex As Exception
             CreateLog("Error in OnStop: " & ex.ToString())
+        End Try
+    End Sub
+
+    Private Sub PruneDoorEventsTask(state As Object)
+        Try
+            db.PruneDoorEventsOlderThan72Hours()
+        Catch ex As Exception
+            CreateLog("Prune door events error: " & ex.Message)
         End Try
     End Sub
 

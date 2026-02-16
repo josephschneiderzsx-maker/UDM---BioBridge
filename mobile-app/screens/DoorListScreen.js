@@ -11,8 +11,9 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Shield, Sun, Moon, Clock, Radio } from 'lucide-react-native';
+import { Shield, Sun, Moon, Radio } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import api from '../services/api';
 import DoorCard from '../components/DoorCard';
@@ -24,6 +25,8 @@ import Logo from '../components/Logo';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HEADER_TOP_PADDING = Math.max(spacing.xl, SCREEN_HEIGHT * 0.02) + (Platform.OS === 'android' ? 10 : 0);
+const FLOATING_HEADER_HEIGHT = 160;
+const TAB_BAR_PADDING_BOTTOM = 100;
 
 export default function DoorListScreen({ navigation }) {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -173,10 +176,6 @@ export default function DoorListScreen({ navigation }) {
     );
   };
 
-  const handleActivityLog = () => {
-    navigation.navigate('ActivityLog');
-  };
-
   const handleToggleTheme = () => {
     toggleTheme();
   };
@@ -205,106 +204,97 @@ export default function DoorListScreen({ navigation }) {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Animated.View
-        style={[styles.inner, { opacity: fadeAnim }]}
-      >
-        {/* Header */}
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <Animated.View style={[styles.inner, { opacity: fadeAnim }]}>
+        {/* Floating Header with BlurView */}
         <Animated.View
           style={[
-            styles.header,
+            styles.headerFloating,
             { transform: [{ translateY: headerSlideAnim }] },
           ]}
+          pointerEvents="box-none"
         >
-          <View style={styles.headerTop}>
-            <View>
-              <Logo width={130} />
-              <Text style={[styles.greeting, { color: colors.textPrimary }]}>Doors</Text>
-            </View>
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                style={[styles.themeButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-                onPress={handleToggleTheme}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                {isDark ? (
-                  <Sun size={16} color={colors.textSecondary} strokeWidth={2.5} />
-                ) : (
-                  <Moon size={16} color={colors.textSecondary} strokeWidth={2.5} />
-                )}
-              </TouchableOpacity>
-              {isAdmin && (
+          <BlurView intensity={80} tint="light" style={styles.headerBlur} />
+          <View style={styles.header}>
+            <View style={styles.headerTop}>
+              <View>
+                <Logo width={130} />
+                <Text style={[styles.greeting, { color: colors.textPrimary }]}>Doors</Text>
+              </View>
+              <View style={styles.headerActions}>
                 <TouchableOpacity
                   style={[styles.themeButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-                  onPress={handleActivityLog}
+                  onPress={handleToggleTheme}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <Clock size={16} color={colors.textSecondary} strokeWidth={2.5} />
+                  {isDark ? (
+                    <Sun size={16} color={colors.textSecondary} strokeWidth={2.5} />
+                  ) : (
+                    <Moon size={16} color={colors.textSecondary} strokeWidth={2.5} />
+                  )}
                 </TouchableOpacity>
+              </View>
+            </View>
+            <View style={styles.statsRow}>
+              <View style={[styles.statPill, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
+                <Text style={[styles.statValue, { color: colors.textPrimary }]}>{doors.length}</Text>
+                <Text style={[styles.statLabel, { color: colors.textTertiary }]}>
+                  {doors.length === 1 ? 'door' : 'doors'}
+                </Text>
+              </View>
+              {quota && (
+                <View style={[styles.statPill, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
+                  <Text style={[styles.statValue, { color: colors.textPrimary }]}>{quota.used}/{quota.quota}</Text>
+                  <Text style={[styles.statLabel, { color: colors.textTertiary }]}>quota</Text>
+                </View>
               )}
             </View>
           </View>
-
-          {/* Stats row */}
-          <View style={styles.statsRow}>
-            <View style={[styles.statPill, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
-              <Text style={[styles.statValue, { color: colors.textPrimary }]}>{doors.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.textTertiary }]}>
-                {doors.length === 1 ? 'door' : 'doors'}
-              </Text>
-            </View>
-            {quota && (
-              <View style={[styles.statPill, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
-                <Text style={[styles.statValue, { color: colors.textPrimary }]}>{quota.used}/{quota.quota}</Text>
-                <Text style={[styles.statLabel, { color: colors.textTertiary }]}>quota</Text>
-              </View>
-            )}
-          </View>
         </Animated.View>
 
-        {/* Discovered devices banner */}
-        {isAdmin && pendingDevicesCount > 0 && (
-          <TouchableOpacity
-            style={[styles.discoveredBanner, { backgroundColor: colors.primaryDim, borderColor: colors.primary }]}
-            onPress={() => navigation.navigate('DiscoveredDevices')}
-            activeOpacity={0.7}
-          >
-            <Radio size={16} color={colors.primary} strokeWidth={2} />
-            <Text style={[styles.discoveredBannerText, { color: colors.primary }]}>
-              {pendingDevicesCount} new {pendingDevicesCount === 1 ? 'door' : 'doors'} detected — Tap to review
-            </Text>
-          </TouchableOpacity>
-        )}
+        <View style={[styles.contentWrap, { paddingTop: FLOATING_HEADER_HEIGHT }]}>
+          {isAdmin && pendingDevicesCount > 0 && (
+            <TouchableOpacity
+              style={[styles.discoveredBanner, { backgroundColor: colors.primaryDim, borderColor: colors.primary }]}
+              onPress={() => navigation.navigate('DiscoveredDevices')}
+              activeOpacity={0.7}
+            >
+              <Radio size={16} color={colors.primary} strokeWidth={2} />
+              <Text style={[styles.discoveredBannerText, { color: colors.primary }]}>
+                {pendingDevicesCount} new {pendingDevicesCount === 1 ? 'door' : 'doors'} detected — Tap to review
+              </Text>
+            </TouchableOpacity>
+          )}
 
-        {/* Content */}
-        {loading && doors.length === 0 ? (
-          renderLoader()
-        ) : doors.length === 0 ? (
-          renderEmptyState()
-        ) : (
-          <FlatList
-            data={doors}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item, index }) => (
-              <DoorCard
-                door={item}
-                onPress={handleDoorPress}
-                onLongPress={handleDoorLongPress}
-                index={index}
-              />
-            )}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                tintColor={colors.primary}
-                colors={[colors.primary]}
-              />
-            }
-          />
-        )}
+          {loading && doors.length === 0 ? (
+            renderLoader()
+          ) : doors.length === 0 ? (
+            renderEmptyState()
+          ) : (
+            <FlatList
+              data={doors}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item, index }) => (
+                <DoorCard
+                  door={item}
+                  onPress={handleDoorPress}
+                  onLongPress={handleDoorLongPress}
+                  index={index}
+                />
+              )}
+              contentContainerStyle={[styles.listContent, { paddingBottom: TAB_BAR_PADDING_BOTTOM }]}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                  tintColor={colors.primary}
+                  colors={[colors.primary]}
+                />
+              }
+            />
+          )}
+        </View>
       </Animated.View>
     </SafeAreaView>
   );
@@ -317,10 +307,32 @@ const styles = StyleSheet.create({
   inner: {
     flex: 1,
   },
+  headerFloating: {
+    position: 'absolute',
+    top: 0,
+    left: 20,
+    right: 20,
+    zIndex: 10,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  headerBlur: {
+    ...StyleSheet.absoluteFillObject,
+  },
   header: {
     paddingHorizontal: spacing.xl,
     paddingTop: HEADER_TOP_PADDING,
     paddingBottom: spacing.md,
+  },
+  contentWrap: {
+    flex: 1,
   },
   headerTop: {
     flexDirection: 'row',

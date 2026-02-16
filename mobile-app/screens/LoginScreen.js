@@ -9,6 +9,7 @@ import {
   Animated,
   ScrollView,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Mail, Lock, Building2 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -76,12 +77,18 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={styles.headerFloating}>
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={styles.headerBar}>
+          <Logo width={180} />
+        </View>
+      </View>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: 100 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -94,13 +101,10 @@ export default function LoginScreen({ navigation }) {
               },
             ]}
           >
-            <View style={styles.header}>
-              <Logo width={220} />
-              <View style={styles.logoSpacer} />
-              <Text style={[styles.description, { color: colors.textSecondary }]}>
-                Sign in to manage your doors
-              </Text>
-            </View>
+            <Text style={[styles.description, { color: colors.textSecondary }]}>
+              Sign in to manage your doors
+            </Text>
+            <View style={styles.logoSpacer} />
 
             <View style={styles.form}>
               <Input
@@ -149,18 +153,35 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
+  headerFloating: {
+    position: 'absolute',
+    top: 0,
+    left: 20,
+    right: 20,
+    zIndex: 10,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  headerBar: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+  },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
     paddingBottom: spacing.xxxl,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
-  },
-  header: {
-    marginBottom: 40,
   },
   logoSpacer: {
     height: 20,

@@ -677,6 +677,19 @@ Public Class DatabaseHelper
         End Using
     End Sub
 
+    ''' <summary>Delete door_events older than 72 hours (retention pruning).</summary>
+    Public Sub PruneDoorEventsOlderThan72Hours()
+        Using conn = GetConnection()
+            Dim sql = "DELETE FROM door_events WHERE (event_time IS NOT NULL AND event_time < DATE_SUB(NOW(), INTERVAL 72 HOUR)) OR (event_time IS NULL AND created_at < DATE_SUB(NOW(), INTERVAL 72 HOUR))"
+            Using cmd = New MySqlCommand(sql, conn)
+                Dim deleted = cmd.ExecuteNonQuery()
+                If deleted > 0 Then
+                    ' Logging is optional; caller may log
+                End If
+            End Using
+        End Using
+    End Sub
+
     ' ===== Notification Preferences =====
     Public Function GetNotificationPreferences(userId As Integer) As List(Of NotificationPreference)
         Dim prefs As New List(Of NotificationPreference)()

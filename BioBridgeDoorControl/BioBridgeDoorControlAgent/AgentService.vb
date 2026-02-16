@@ -1,6 +1,7 @@
 Imports System.ServiceProcess
 Imports System.Threading
 Imports System.Configuration
+Imports System.Collections.Generic
 
 Public Class AgentService
     Inherits System.ServiceProcess.ServiceBase
@@ -247,12 +248,31 @@ Public Class AgentService
         While isRunning
             Try
                 If agentId > 0 AndAlso ingressHelper IsNot Nothing Then
-                    ' Sync events
-                    Dim events = ingressHelper.GetNewEvents()
-                    If events.Count > 0 Then
-                        CreateLog("Ingress: Syncing " & events.Count & " new events")
-                        serverClient.SendIngressEvents(agentId, events)
-                    End If
+                    ' Sync events from door_eventlog (streaming: send each event individually)
+                    Dim events As List(Of IngressHelper.IngressEvent) = ingressHelper.GetNewEvents()
+                    For Each ev As IngressHelper.IngressEvent In events
+                        Try
+                            Dim singleList As New List(Of IngressHelper.IngressEvent)()
+                            singleList.Add(ev)
+                            serverClient.SendIngressEvents(agentId, singleList)
+                            ingressHelper.SetLastSyncId(ev.IngressId)
+                        Catch sendEx As Exception
+                            CreateLog("Ingress: Failed to send event " & ev.IngressId & ": " & sendEx.Message)
+                        End Try
+                    Next
+
+                    ' Sync events from door_eventlog_remote (types 7, 8, 9)
+                    Dim remoteEvents As List(Of IngressHelper.IngressEvent) = ingressHelper.GetNewEventsFromRemote()
+                    For Each rev As IngressHelper.IngressEvent In remoteEvents
+                        Try
+                            Dim singleList As New List(Of IngressHelper.IngressEvent)()
+                            singleList.Add(rev)
+                            serverClient.SendIngressEvents(agentId, singleList)
+                            ingressHelper.SetLastRemoteSyncId(rev.IngressId)
+                        Catch sendEx As Exception
+                            CreateLog("Ingress: Failed to send remote event " & rev.IngressId & ": " & sendEx.Message)
+                        End Try
+                    Next
 
                     ' Periodically re-discover doors from Ingress
                     doorDiscoveryCounter += 1

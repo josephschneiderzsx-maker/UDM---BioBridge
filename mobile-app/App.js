@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StatusBar, View, Animated, StyleSheet, Image } from 'react-native';
+import { StatusBar, View, Animated, StyleSheet, Image, Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DoorOpen, Plus, User, History } from 'lucide-react-native';
@@ -170,10 +171,25 @@ function MainTabs() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.separator,
-          borderTopWidth: 1,
+          position: 'absolute',
+          left: 20,
+          right: 20,
+          bottom: Platform.OS === 'ios' ? 28 : 16,
+          borderRadius: 30,
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.4)',
+          overflow: 'hidden',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.25,
+          shadowRadius: 12,
+          elevation: 8,
+          backgroundColor: 'transparent',
+          height: 64,
         },
+        tabBarBackground: () => (
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        ),
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabelStyle: { fontSize: 12, fontWeight: '500' },

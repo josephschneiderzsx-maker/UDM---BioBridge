@@ -10,8 +10,12 @@ import {
   TouchableOpacity,
   Animated,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Save, Server, Lock, Clock } from 'lucide-react-native';
+
+const FLOATING_HEADER_HEIGHT = 80;
+const TAB_BAR_PADDING_BOTTOM = 100;
 import api from '../services/api';
 import Input from '../components/Input';
 import PrimaryButton from '../components/PrimaryButton';
@@ -90,10 +94,25 @@ export default function EditDoorScreen({ route, navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <View style={styles.headerFloating}>
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={[styles.closeButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <X size={18} color={colors.textSecondary} strokeWidth={2.5} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Edit Door</Text>
+          <View style={styles.placeholder} />
+        </View>
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+        style={[styles.keyboardView, { paddingTop: FLOATING_HEADER_HEIGHT }]}
       >
         <Animated.View
           style={[
@@ -104,22 +123,9 @@ export default function EditDoorScreen({ route, navigation }) {
             },
           ]}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-              onPress={() => navigation.goBack()}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <X size={18} color={colors.textSecondary} strokeWidth={2.5} />
-            </TouchableOpacity>
-            <Text style={[styles.title, { color: colors.textPrimary }]}>Edit Door</Text>
-            <View style={styles.placeholder} />
-          </View>
-
           <ScrollView
             style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: TAB_BAR_PADDING_BOTTOM }]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -221,6 +227,22 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  headerFloating: {
+    position: 'absolute',
+    top: 0,
+    left: 20,
+    right: 20,
+    zIndex: 10,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
   },
   header: {
     flexDirection: 'row',
