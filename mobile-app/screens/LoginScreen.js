@@ -8,8 +8,8 @@ import {
   Alert,
   Animated,
   ScrollView,
+  Image,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Mail, Lock, Building2 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -77,18 +77,12 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.headerFloating}>
-        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-        <View style={styles.headerBar}>
-          <Logo width={180} />
-        </View>
-      </View>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingTop: 100 }]}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -101,12 +95,22 @@ export default function LoginScreen({ navigation }) {
               },
             ]}
           >
+            <View style={styles.logoContainer}>
+              <Logo width={200} />
+            </View>
+
+            <Text style={[styles.title, { color: colors.textPrimary }]}>
+              Welcome back
+            </Text>
             <Text style={[styles.description, { color: colors.textSecondary }]}>
               Sign in to manage your doors
             </Text>
-            <View style={styles.logoSpacer} />
 
-            <View style={styles.form}>
+            <View style={[styles.card, {
+              backgroundColor: colors.surface,
+              borderColor: colors.separator,
+              shadowColor: '#000',
+            }]}>
               <Input
                 label="Organization"
                 value={tenant}
@@ -132,13 +136,23 @@ export default function LoginScreen({ navigation }) {
                 secureTextEntry
                 icon={<Lock size={18} color={colors.textTertiary} strokeWidth={1.5} />}
               />
+
+              <View style={styles.buttonContainer}>
+                <PrimaryButton
+                  title="Sign In"
+                  onPress={handleLogin}
+                  loading={loading}
+                />
+              </View>
             </View>
 
-            <PrimaryButton
-              title="Sign In"
-              onPress={handleLogin}
-              loading={loading}
-            />
+            <View style={styles.footer}>
+              <Image
+                source={require('../assets/urzis-logo.png')}
+                style={styles.footerLogo}
+                resizeMode="contain"
+              />
+            </View>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -153,44 +167,52 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  headerFloating: {
-    position: 'absolute',
-    top: 0,
-    left: 20,
-    right: 20,
-    zIndex: 10,
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  headerBar: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.lg,
-  },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxxl,
-  },
-  content: {
-    flex: 1,
     justifyContent: 'center',
   },
-  logoSpacer: {
-    height: 20,
+  content: {
+    alignItems: 'center',
+  },
+  logoContainer: {
+    marginBottom: spacing.xl,
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    marginBottom: 6,
+    textAlign: 'center',
   },
   description: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  form: {
+    fontSize: 15,
+    lineHeight: 22,
     marginBottom: spacing.xl,
+    textAlign: 'center',
+  },
+  card: {
+    width: '100%',
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: spacing.lg,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  buttonContainer: {
+    marginTop: spacing.md,
+  },
+  footer: {
+    marginTop: spacing.xxl,
+    alignItems: 'center',
+    opacity: 0.5,
+  },
+  footerLogo: {
+    width: 90,
+    height: 30,
   },
 });

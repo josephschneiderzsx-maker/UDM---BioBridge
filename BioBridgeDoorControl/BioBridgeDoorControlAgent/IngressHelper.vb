@@ -9,6 +9,39 @@ Public Class IngressHelper
 
     Public Sub New(connectionString As String)
         _connectionString = connectionString
+        InitializeLastSyncIds()
+    End Sub
+
+    ''' <summary>
+    ''' Initialize sync IDs to current MAX so we only process NEW events after startup.
+    ''' </summary>
+    Private Sub InitializeLastSyncIds()
+        Try
+            Using conn As New MySqlConnection(_connectionString)
+                conn.Open()
+                ' Get max id from door_eventlog
+                Using cmd As New MySqlCommand("SELECT COALESCE(MAX(id), 0) FROM door_eventlog", conn)
+                    _lastSyncId = Convert.ToInt32(cmd.ExecuteScalar())
+                End Using
+                ' Get max id from door_eventlog_remote
+                Try
+                    Using cmd2 As New MySqlCommand("SELECT COALESCE(MAX(id), 0) FROM door_eventlog_remote", conn)
+                        _lastRemoteSyncId = Convert.ToInt32(cmd2.ExecuteScalar())
+                    End Using
+                Catch
+                    ' Table may not exist yet
+                    _lastRemoteSyncId = 0
+                End Try
+            End Using
+        Catch ex As Exception
+            ' If we can't read, start from 0 (will re-send but won't crash)
+            _lastSyncId = 0
+            _lastRemoteSyncId = 0
+            Try
+                EventLog.WriteEntry("UDM-Agent", "IngressHelper.InitializeLastSyncIds error: " & ex.Message, EventLogEntryType.Warning)
+            Catch
+            End Try
+        End Try
     End Sub
 
     ''' <summary>Update last sync id after successfully sending an event (streaming mode).</summary>
@@ -31,18 +64,29 @@ Public Class IngressHelper
         Try
             Using conn As New MySqlConnection(_connectionString)
                 conn.Open()
-                Dim sql = "SELECT el.id, el.serialno, el.eventType, el.eventtime, el.userid, " &
+                Dim sql = "SELECT el.id, el.serialno, el.eventType, el.eventtime, " &
                           "d.ipaddress, d.Port, " &
                           "COALESCE(eld.description, CONCAT('Event type ', el.eventType)) AS description, " &
-                          "u.username " &
+                          "COALESCE(dtl_user.userid, el.userid) AS real_userid, " &
+                          "COALESCE(u2.username, u.username) AS real_username " &
                           "FROM door_eventlog el " &
                           "LEFT JOIN device d ON d.serialno = el.serialno " &
                           "LEFT JOIN door_eventlog_description eld ON eld.eventtype = CAST(el.eventType AS UNSIGNED) " &
                           "LEFT JOIN user u ON u.userid = el.userid " &
+                          "LEFT JOIN device_transaction_log dtl_user ON dtl_user.id = (" &
+                          "  SELECT dtl2.id FROM device_transaction_log dtl2 " &
+                          "  WHERE dtl2.serialno = el.serialno " &
+                          "    AND dtl2.checktime BETWEEN DATE_SUB(el.eventtime, INTERVAL 15 SECOND) AND el.eventtime " &
+                          "  ORDER BY dtl2.checktime DESC LIMIT 1" &
+                          ") " &
+                          "LEFT JOIN user u2 ON u2.userid = dtl_user.userid " &
                           "WHERE el.id > @lastId " &
                           "ORDER BY el.id ASC"
                 Using cmd As New MySqlCommand(sql, conn)
                     cmd.Parameters.AddWithValue("@lastId", _lastSyncId)
+                    ' Columns: 0=id, 1=serialno, 2=eventType, 3=eventtime,
+                    '          4=ipaddress, 5=Port, 6=description,
+                    '          7=real_userid, 8=real_username
                     Using rdr = cmd.ExecuteReader()
                         While rdr.Read()
                             Dim ev As New IngressEvent()
@@ -50,10 +94,10 @@ Public Class IngressHelper
                             If Not rdr.IsDBNull(1) Then ev.SerialNo = rdr.GetString(1)
                             If Not rdr.IsDBNull(2) Then ev.EventType = rdr.GetString(2)
                             If Not rdr.IsDBNull(3) Then ev.EventTime = rdr.GetDateTime(3)
-                            If Not rdr.IsDBNull(4) Then ev.UserId = rdr.GetString(4)
-                            If Not rdr.IsDBNull(5) Then ev.DeviceIP = rdr.GetString(5)
-                            If Not rdr.IsDBNull(6) Then ev.DevicePort = rdr.GetInt32(6)
-                            If Not rdr.IsDBNull(7) Then ev.Description = rdr.GetString(7)
+                            If Not rdr.IsDBNull(4) Then ev.DeviceIP = rdr.GetString(4)
+                            If Not rdr.IsDBNull(5) Then ev.DevicePort = rdr.GetInt32(5)
+                            If Not rdr.IsDBNull(6) Then ev.Description = rdr.GetString(6)
+                            If Not rdr.IsDBNull(7) Then ev.UserId = rdr.GetString(7)
                             If Not rdr.IsDBNull(8) Then ev.UserName = rdr.GetString(8)
                             events.Add(ev)
                         End While
@@ -79,12 +123,16 @@ Public Class IngressHelper
         Try
             Using conn As New MySqlConnection(_connectionString)
                 conn.Open()
-                Dim sql = "SELECT r.id, r.idDoor, r.eventType, r.eventTime, d.serialno " &
+                Dim sql = "SELECT r.id, r.idDoor, r.eventType, r.eventTime, d.serialno, " &
+                          "d.ipaddress, d.Port, r.userid, su.username " &
                           "FROM door_eventlog_remote r " &
                           "LEFT JOIN door_device dd ON dd.idDoor = r.idDoor " &
                           "LEFT JOIN device d ON d.iddevice = dd.idDevice " &
+                          "LEFT JOIN system_user su ON su.id = r.userid " &
                           "WHERE r.id > @lastRemoteId AND r.eventType IN (7, 8, 9) " &
                           "ORDER BY r.id ASC"
+                ' Columns: 0=id, 1=idDoor, 2=eventType, 3=eventTime, 4=serialno,
+                '          5=ipaddress, 6=Port, 7=userid, 8=username
                 Using cmd As New MySqlCommand(sql, conn)
                     cmd.Parameters.AddWithValue("@lastRemoteId", _lastRemoteSyncId)
                     Using rdr = cmd.ExecuteReader()
@@ -92,8 +140,12 @@ Public Class IngressHelper
                             Dim ev As New IngressEvent()
                             ev.IngressId = rdr.GetInt32(0)
                             If Not rdr.IsDBNull(4) Then ev.SerialNo = rdr.GetString(4)
-                            If Not rdr.IsDBNull(2) Then ev.EventType = rdr.GetString(2)
+                            If Not rdr.IsDBNull(2) Then ev.EventType = rdr.GetInt32(2).ToString()
                             If Not rdr.IsDBNull(3) Then ev.EventTime = rdr.GetDateTime(3)
+                            If Not rdr.IsDBNull(5) Then ev.DeviceIP = rdr.GetString(5)
+                            If Not rdr.IsDBNull(6) Then ev.DevicePort = rdr.GetInt32(6)
+                            If Not rdr.IsDBNull(7) Then ev.UserId = rdr.GetInt32(7).ToString()
+                            If Not rdr.IsDBNull(8) Then ev.UserName = rdr.GetString(8)
                             ev.Description = GetRemoteEventDescription(ev.EventType)
                             events.Add(ev)
                         End While

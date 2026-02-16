@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   Animated,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassBackground from '../components/GlassBackground';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Save, Server, Lock, Clock } from 'lucide-react-native';
 
@@ -96,7 +96,7 @@ export default function EditDoorScreen({ route, navigation }) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.headerFloating}>
-        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <GlassBackground intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={styles.header}>
           <TouchableOpacity
             style={[styles.closeButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}

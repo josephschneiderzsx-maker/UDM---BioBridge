@@ -1989,8 +1989,13 @@ Public Class Service1
                 End If
 
                 If doorIdResolved.HasValue Then
-                    db.InsertDoorEvent(doorIdResolved.Value, evType, evData, Nothing, agentId, "ingress", ingressId, eventTime, displayUser)
-                    inserted += 1
+                    ' Deduplicate: skip if this ingress_event_id was already inserted
+                    If ingressId.HasValue AndAlso db.IngressEventExists(ingressId.Value, agentId) Then
+                        ' Already synced, skip
+                    Else
+                        db.InsertDoorEvent(doorIdResolved.Value, evType, evData, Nothing, agentId, "ingress", ingressId, eventTime, displayUser)
+                        inserted += 1
+                    End If
                 Else
                     CreateLog("Agent ingress - No door found for IP=" & If(deviceIp, "") & " SN=" & If(serialNo, ""))
                 End If

@@ -9,7 +9,7 @@ import {
   Dimensions,
   PanResponder,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassBackground from '../components/GlassBackground';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Haptics from 'expo-haptics';
@@ -398,7 +398,7 @@ export default function DoorControlScreen({ route, navigation }) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.topBarFloating}>
-        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <GlassBackground intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={styles.dragIndicator}>
           <View style={[styles.dragHandle, {
             backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',

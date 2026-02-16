@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar, View, Animated, StyleSheet, Image, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassBackground from './components/GlassBackground';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DoorOpen, Plus, User, History } from 'lucide-react-native';
@@ -188,7 +188,7 @@ function MainTabs() {
           height: 64,
         },
         tabBarBackground: () => (
-          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <GlassBackground intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         ),
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,

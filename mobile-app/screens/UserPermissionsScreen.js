@@ -11,7 +11,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassBackground from '../components/GlassBackground';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Save, DoorOpen, Eye, Lock, Unlock } from 'lucide-react-native';
 import api from '../services/api';
@@ -150,7 +150,7 @@ export default function UserPermissionsScreen({ route, navigation }) {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <Animated.View style={[styles.inner, { opacity: fadeAnim }]}>
         <View style={styles.headerFloating}>
-          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <GlassBackground intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           <View style={styles.header}>
             <TouchableOpacity
               style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}

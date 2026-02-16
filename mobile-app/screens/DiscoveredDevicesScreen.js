@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassBackground from '../components/GlassBackground';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Check, X, Radio } from 'lucide-react-native';
 import api from '../services/api';
@@ -123,7 +123,7 @@ export default function DiscoveredDevicesScreen({ navigation }) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.headerFloating}>
-        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <GlassBackground intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={styles.header}>
           <TouchableOpacity
             style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}

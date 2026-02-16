@@ -11,7 +11,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassBackground from '../components/GlassBackground';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Shield, Sun, Moon, Radio } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -206,7 +206,7 @@ export default function DoorListScreen({ navigation }) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <Animated.View style={[styles.inner, { opacity: fadeAnim }]}>
-        {/* Floating Header with BlurView */}
+        {/* Floating Header */}
         <Animated.View
           style={[
             styles.headerFloating,
@@ -214,7 +214,7 @@ export default function DoorListScreen({ navigation }) {
           ]}
           pointerEvents="box-none"
         >
-          <BlurView intensity={80} tint="light" style={styles.headerBlur} />
+          <GlassBackground intensity={80} tint="light" style={styles.headerBlur} />
           <View style={styles.header}>
             <View style={styles.headerTop}>
               <View>

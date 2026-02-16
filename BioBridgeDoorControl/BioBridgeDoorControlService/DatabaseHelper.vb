@@ -658,6 +658,18 @@ Public Class DatabaseHelper
         Public Property DiscoveredAt As DateTime
     End Class
 
+    ''' <summary>Check if an ingress event was already synced (deduplication).</summary>
+    Public Function IngressEventExists(ingressEventId As Integer, agentId As Integer) As Boolean
+        Using conn = GetConnection()
+            Dim sql = "SELECT COUNT(*) FROM door_events WHERE ingress_event_id = @iid AND agent_id = @aid AND source = 'ingress' LIMIT 1"
+            Using cmd = New MySqlCommand(sql, conn)
+                cmd.Parameters.AddWithValue("@iid", ingressEventId)
+                cmd.Parameters.AddWithValue("@aid", agentId)
+                Return Convert.ToInt32(cmd.ExecuteScalar()) > 0
+            End Using
+        End Using
+    End Function
+
     Public Sub InsertDoorEvent(doorId As Integer, eventType As String, eventData As String, Optional userId As Integer? = Nothing, Optional agentId As Integer? = Nothing, Optional source As String = "command", Optional ingressEventId As Integer? = Nothing, Optional eventTime As DateTime? = Nothing, Optional ingressUserId As String = Nothing)
         Using conn = GetConnection()
             Dim sql = "INSERT INTO door_events (door_id, user_id, agent_id, event_type, event_data, source, ingress_event_id, created_at, event_time, ingress_user_id) " &

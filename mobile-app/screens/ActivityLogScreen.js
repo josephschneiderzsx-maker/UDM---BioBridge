@@ -13,7 +13,7 @@ import {
   Modal,
   Pressable,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassBackground from '../components/GlassBackground';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ChevronLeft, LogIn, LogOut, Activity, AlertTriangle, Clock, Shield, ShieldX,
@@ -238,7 +238,7 @@ function EventDetailModal({ event, visible, onClose, colors }) {
           },
         ]}
       >
-        <BlurView intensity={80} tint="light" style={modalStyles.sheetBlur} />
+        <GlassBackground intensity={80} tint="light" style={modalStyles.sheetBlur} />
         <View style={modalStyles.sheetContent}>
           <View style={modalStyles.dragHandle}>
             <View style={[modalStyles.handle, { backgroundColor: colors.fillSecondary }]} />
@@ -374,7 +374,7 @@ export default function ActivityLogScreen({ route, navigation }) {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <Animated.View style={[styles.inner, { opacity: fadeAnim }]}>
         <View style={styles.headerFloating}>
-          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <GlassBackground intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           <View style={styles.header}>
             <TouchableOpacity
               style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
