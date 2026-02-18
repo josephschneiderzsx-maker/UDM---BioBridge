@@ -11,7 +11,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, User, Lock, LogOut, Users, Mail, Save } from 'lucide-react-native';
+import { ChevronLeft, User, Lock, LogOut, Users, Mail, Save, Smartphone } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import api from '../services/api';
 import Input from '../components/Input';
