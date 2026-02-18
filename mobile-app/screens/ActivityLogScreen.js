@@ -264,7 +264,7 @@ function EventDetailModal({ event, visible, onClose, colors, scaleFont, isDark }
 
 export default function ActivityLogScreen({ route, navigation }) {
   const { colors, isDark } = useTheme();
-  const { scaleFont, spacing: rSpacing, isSmallPhone, isTablet, contentMaxWidth } = useResponsive();
+  const { scaleFont, spacing: rSpacing, isSmallPhone, isTablet, contentMaxWidth, tabBarPadding, isLowEndDevice } = useResponsive();
 
   const doorId = route.params?.doorId || null;
   const doorName = route.params?.doorName || null;
@@ -275,8 +275,8 @@ export default function ActivityLogScreen({ route, navigation }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const HEADER_TOP_PADDING = Math.max(rSpacing(24), SCREEN_HEIGHT * 0.02) + (Platform.OS === 'android' ? 10 : 0);
-  const FLOATING_HEADER_HEIGHT_ACTIVITY = isSmallPhone ? 100 : 120;
-  const TAB_BAR_PADDING_BOTTOM = isSmallPhone ? 90 : 100;
+  const FLOATING_HEADER_HEIGHT_ACTIVITY = isLowEndDevice ? 90 : isSmallPhone ? 100 : 120;
+  const TAB_BAR_PADDING_BOTTOM = tabBarPadding();
 
   useEffect(() => {
     loadEvents();
