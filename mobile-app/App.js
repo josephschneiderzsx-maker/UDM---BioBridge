@@ -185,14 +185,16 @@ function AccountStack() {
 
 function MainTabs() {
   const { colors, isDark } = useTheme();
-  const { isSmallPhone, isTablet, scaleFont } = useResponsive();
+  const { isSmallPhone, isTablet, scaleFont, isLowEndDevice } = useResponsive();
 
-  // Responsive tab bar dimensions
-  const tabBarHeight = isSmallPhone ? 58 : isTablet ? 72 : 64;
-  const tabBarMargin = isSmallPhone ? 16 : 20;
-  const tabBarBottom = Platform.OS === 'ios' ? (isSmallPhone ? 24 : 28) : (isSmallPhone ? 12 : 16);
-  const iconSize = isSmallPhone ? 20 : isTablet ? 26 : 22;
-  const labelSize = isSmallPhone ? 10 : isTablet ? 14 : 12;
+  // Responsive tab bar dimensions - smaller for low-end devices
+  const tabBarHeight = isLowEndDevice ? 52 : isSmallPhone ? 56 : isTablet ? 72 : 64;
+  const tabBarMargin = isLowEndDevice ? 12 : isSmallPhone ? 14 : 20;
+  const tabBarBottom = Platform.OS === 'ios' 
+    ? (isSmallPhone ? 20 : 28) 
+    : (isLowEndDevice ? 8 : isSmallPhone ? 10 : 16);
+  const iconSize = isLowEndDevice ? 18 : isSmallPhone ? 20 : isTablet ? 26 : 22;
+  const labelSize = isLowEndDevice ? 9 : isSmallPhone ? 10 : isTablet ? 14 : 12;
 
   return (
     <Tab.Navigator
@@ -227,10 +229,11 @@ function MainTabs() {
         tabBarLabelStyle: {
           fontSize: labelSize,
           fontWeight: '500',
-          marginTop: -2,
+          marginTop: isLowEndDevice ? -4 : -2,
+          marginBottom: isLowEndDevice ? 2 : 0,
         },
         tabBarIconStyle: {
-          marginTop: 2,
+          marginTop: isLowEndDevice ? 0 : 2,
         },
       }}
     >
