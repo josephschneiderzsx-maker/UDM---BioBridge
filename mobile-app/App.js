@@ -280,7 +280,7 @@ function MainTabs() {
           title: 'History',
           tabBarIcon: ({ color, focused }) => (
             <Animated.View style={{ transform: [{ scale: focused ? 1.1 : 1 }] }}>
-              <History size={iconSize} color={color} strokeWidth={focused ? 2.5 : 2} />
+              <History size={iconSizeVal} color={color} strokeWidth={focused ? 2.5 : 2} />
             </Animated.View>
           ),
         }}
@@ -292,7 +292,7 @@ function MainTabs() {
           title: 'Account',
           tabBarIcon: ({ color, focused }) => (
             <Animated.View style={{ transform: [{ scale: focused ? 1.1 : 1 }] }}>
-              <User size={iconSize} color={color} strokeWidth={focused ? 2.5 : 2} />
+              <User size={iconSizeVal} color={color} strokeWidth={focused ? 2.5 : 2} />
             </Animated.View>
           ),
         }}
