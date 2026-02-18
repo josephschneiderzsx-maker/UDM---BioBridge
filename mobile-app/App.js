@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StatusBar, View, Animated, StyleSheet, Image, Platform } from 'react-native';
+import { StatusBar, View, Animated, StyleSheet, Image, Platform, Dimensions } from 'react-native';
 import GlassBackground from './components/GlassBackground';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -22,35 +22,54 @@ import UserPermissionsScreen from './screens/UserPermissionsScreen';
 import ActivityLogScreen from './screens/ActivityLogScreen';
 import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import useResponsive from './hooks/useResponsive';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 function SplashScreen({ onFinish }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.88)).current;
+  const logoFadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
+    // Staggered entrance animation
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 50,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.timing(logoFadeAnim, {
         toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 8,
+        duration: 400,
         useNativeDriver: true,
       }),
     ]).start();
 
     const timer = setTimeout(() => {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => onFinish());
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoFadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start(() => onFinish());
     }, 2200);
 
     return () => clearTimeout(timer);
@@ -67,10 +86,10 @@ function SplashScreen({ onFinish }) {
           },
         ]}
       >
-        <Logo width={280} variant="white" />
+        <Logo width={Math.min(SCREEN_WIDTH * 0.65, 280)} variant="white" />
       </Animated.View>
 
-      <Animated.View style={[splashStyles.footer, { opacity: fadeAnim }]}>
+      <Animated.View style={[splashStyles.footer, { opacity: logoFadeAnim }]}>
         <Image
           source={require('./assets/urzis-logo.png')}
           style={splashStyles.footerLogo}
@@ -165,34 +184,54 @@ function AccountStack() {
 }
 
 function MainTabs() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const { isSmallPhone, isTablet, scaleFont } = useResponsive();
+
+  // Responsive tab bar dimensions
+  const tabBarHeight = isSmallPhone ? 58 : isTablet ? 72 : 64;
+  const tabBarMargin = isSmallPhone ? 16 : 20;
+  const tabBarBottom = Platform.OS === 'ios' ? (isSmallPhone ? 24 : 28) : (isSmallPhone ? 12 : 16);
+  const iconSize = isSmallPhone ? 20 : isTablet ? 26 : 22;
+  const labelSize = isSmallPhone ? 10 : isTablet ? 14 : 12;
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
           position: 'absolute',
-          left: 20,
-          right: 20,
-          bottom: Platform.OS === 'ios' ? 28 : 16,
+          left: tabBarMargin,
+          right: tabBarMargin,
+          bottom: tabBarBottom,
           borderRadius: 30,
           borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.4)',
+          borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
           overflow: 'hidden',
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.25,
+          shadowOpacity: isDark ? 0.3 : 0.15,
           shadowRadius: 12,
           elevation: 8,
           backgroundColor: 'transparent',
-          height: 64,
+          height: tabBarHeight,
         },
         tabBarBackground: () => (
-          <GlassBackground intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <GlassBackground
+            intensity={80}
+            tint={isDark ? 'dark' : 'light'}
+            style={StyleSheet.absoluteFill}
+          />
         ),
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,
-        tabBarLabelStyle: { fontSize: 12, fontWeight: '500' },
+        tabBarLabelStyle: {
+          fontSize: labelSize,
+          fontWeight: '500',
+          marginTop: -2,
+        },
+        tabBarIconStyle: {
+          marginTop: 2,
+        },
       }}
     >
       <Tab.Screen
@@ -200,8 +239,10 @@ function MainTabs() {
         component={StatusStack}
         options={{
           title: 'Doors',
-          tabBarIcon: ({ color, size }) => (
-            <DoorOpen size={size || 22} color={color} strokeWidth={2} />
+          tabBarIcon: ({ color, focused }) => (
+            <Animated.View style={{ transform: [{ scale: focused ? 1.1 : 1 }] }}>
+              <DoorOpen size={iconSize} color={color} strokeWidth={focused ? 2.5 : 2} />
+            </Animated.View>
           ),
         }}
       />
@@ -209,9 +250,11 @@ function MainTabs() {
         name="AddDoorTab"
         component={AddDoorStack}
         options={{
-          title: 'Add new door',
-          tabBarIcon: ({ color, size }) => (
-            <Plus size={size || 22} color={color} strokeWidth={2.5} />
+          title: 'Add',
+          tabBarIcon: ({ color, focused }) => (
+            <Animated.View style={{ transform: [{ scale: focused ? 1.1 : 1 }] }}>
+              <Plus size={iconSize} color={color} strokeWidth={focused ? 3 : 2.5} />
+            </Animated.View>
           ),
         }}
       />
@@ -220,8 +263,10 @@ function MainTabs() {
         component={HistoryStack}
         options={{
           title: 'History',
-          tabBarIcon: ({ color, size }) => (
-            <History size={size || 22} color={color} strokeWidth={2} />
+          tabBarIcon: ({ color, focused }) => (
+            <Animated.View style={{ transform: [{ scale: focused ? 1.1 : 1 }] }}>
+              <History size={iconSize} color={color} strokeWidth={focused ? 2.5 : 2} />
+            </Animated.View>
           ),
         }}
       />
@@ -230,8 +275,10 @@ function MainTabs() {
         component={AccountStack}
         options={{
           title: 'Account',
-          tabBarIcon: ({ color, size }) => (
-            <User size={size || 22} color={color} strokeWidth={2} />
+          tabBarIcon: ({ color, focused }) => (
+            <Animated.View style={{ transform: [{ scale: focused ? 1.1 : 1 }] }}>
+              <User size={iconSize} color={color} strokeWidth={focused ? 2.5 : 2} />
+            </Animated.View>
           ),
         }}
       />
@@ -277,6 +324,7 @@ function AppNavigator() {
       <StatusBar
         barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
+        translucent={Platform.OS === 'android'}
       />
       <RootNavigationProvider refValue={navigationRef}>
         <NavigationContainer
