@@ -395,8 +395,6 @@ const styles = StyleSheet.create({
   headerFloating: {
     position: 'absolute',
     top: 0,
-    left: 20,
-    right: 20,
     zIndex: 10,
     borderRadius: 30,
     borderWidth: 1,
