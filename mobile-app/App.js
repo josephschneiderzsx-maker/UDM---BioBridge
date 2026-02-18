@@ -21,6 +21,7 @@ import CreateUserScreen from './screens/CreateUserScreen';
 import UserPermissionsScreen from './screens/UserPermissionsScreen';
 import ActivityLogScreen from './screens/ActivityLogScreen';
 import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
+import WidgetSettingsScreen from './screens/WidgetSettingsScreen';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import useResponsive from './hooks/useResponsive';
 
