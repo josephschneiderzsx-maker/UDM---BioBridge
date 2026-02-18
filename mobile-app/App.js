@@ -241,11 +241,11 @@ function MainTabs() {
         tabBarLabelStyle: {
           fontSize: labelSize,
           fontWeight: '500',
-          marginTop: isLowEndDevice ? -4 : -2,
-          marginBottom: isLowEndDevice ? 2 : 0,
+          marginTop: isCompactMode ? -5 : isLowEndDevice ? -4 : -2,
+          marginBottom: isCompactMode ? 3 : isLowEndDevice ? 2 : 0,
         },
         tabBarIconStyle: {
-          marginTop: isLowEndDevice ? 0 : 2,
+          marginTop: isCompactMode ? -2 : isLowEndDevice ? 0 : 2,
         },
       }}
     >
