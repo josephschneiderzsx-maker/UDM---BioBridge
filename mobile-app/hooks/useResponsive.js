@@ -5,10 +5,11 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Breakpoints
 const BREAKPOINTS = {
-  smallPhone: 320,    // iPhone SE, small Android
-  phone: 375,         // iPhone X/11/12/13/14
-  largePhone: 414,    // iPhone Plus/Max, large Android
-  tablet: 768,        // iPad, Android tablets
+  verySmallPhone: 320, // Very old/small phones
+  smallPhone: 360,     // Motorola G, budget Android (720p)
+  phone: 375,          // iPhone X/11/12/13/14
+  largePhone: 414,     // iPhone Plus/Max, large Android
+  tablet: 768,         // iPad, Android tablets
 };
 
 // Base dimensions for scaling (iPhone 11 Pro as reference)
@@ -38,10 +39,12 @@ export default function useResponsive() {
   const { width, height } = dimensions;
 
   // Device type detection
-  const isSmallPhone = width < BREAKPOINTS.phone;
+  const isVerySmallPhone = width < BREAKPOINTS.smallPhone;
+  const isSmallPhone = width >= BREAKPOINTS.smallPhone && width < BREAKPOINTS.phone;
   const isPhone = width >= BREAKPOINTS.phone && width < BREAKPOINTS.largePhone;
   const isLargePhone = width >= BREAKPOINTS.largePhone && width < BREAKPOINTS.tablet;
   const isTablet = width >= BREAKPOINTS.tablet;
+  const isLowEndDevice = isVerySmallPhone || isSmallPhone || height < 700;
 
   // Scaling factors
   const widthScale = width / BASE_WIDTH;
@@ -149,7 +152,18 @@ export default function useResponsive() {
    */
   const tabBarHeight = () => {
     const base = 64;
-    return isSmallPhone ? base - 4 : isTablet ? base + 8 : base;
+    if (isVerySmallPhone || isSmallPhone) return 56;
+    if (isTablet) return base + 8;
+    return base;
+  };
+
+  /**
+   * Get bottom padding to avoid tab bar overlap
+   */
+  const tabBarPadding = () => {
+    if (isVerySmallPhone || isSmallPhone) return 75;
+    if (Platform.OS === 'ios') return 100;
+    return 85;
   };
 
   /**
@@ -188,10 +202,12 @@ export default function useResponsive() {
     height,
     
     // Device types
+    isVerySmallPhone,
     isSmallPhone,
     isPhone,
     isLargePhone,
     isTablet,
+    isLowEndDevice,
     
     // Scaling functions
     scaleWidth,
@@ -204,6 +220,7 @@ export default function useResponsive() {
     cardPadding,
     headerHeight,
     tabBarHeight,
+    tabBarPadding,
     hitSlop,
     gridColumns,
     contentMaxWidth,
