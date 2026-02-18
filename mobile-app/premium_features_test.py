@@ -98,7 +98,7 @@ class PremiumFeaturesValidator:
             # Check for animation features
             animation_features = [
                 'transitionProgress', 'overlayOpacity', 'animatedColors',
-                'animateThemeChange', 'Animated.timing', 'Animated.spring'
+                'animateThemeChange', 'Animated.timing'
             ]
             
             missing_features = []
