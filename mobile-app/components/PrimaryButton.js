@@ -5,10 +5,17 @@ import {
   StyleSheet,
   ActivityIndicator,
   View,
+  Animated,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
+import useResponsive from '../hooks/useResponsive';
 
+/**
+ * Primary button component with haptic feedback and responsive sizing
+ * Backward compatible with existing usage while adding new premium features
+ */
 export default function PrimaryButton({
   title,
   onPress,
@@ -22,24 +29,70 @@ export default function PrimaryButton({
   fullWidth = true,
 }) {
   const { colors } = useTheme();
+  const { scaleFont, buttonHeight, isSmallPhone } = useResponsive();
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
 
-  const handlePress = () => {
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.96,
+      tension: 150,
+      friction: 10,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      tension: 150,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePress = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress?.();
   };
 
   const getButtonStyle = () => {
-    const baseStyle = [styles.button, size === 'small' && styles.buttonSmall];
+    const height = size === 'small' 
+      ? buttonHeight('small') 
+      : size === 'large' 
+        ? buttonHeight('large') 
+        : buttonHeight('medium');
+    
+    const baseStyle = [
+      styles.button,
+      { height },
+      size === 'small' && styles.buttonSmall,
+    ];
+
     switch (variant) {
       case 'success':
         return [...baseStyle, { backgroundColor: colors.success }];
       case 'danger':
         return [...baseStyle, { backgroundColor: colors.danger }];
       case 'secondary':
-        return [...baseStyle, { backgroundColor: colors.primaryDim, borderWidth: 1, borderColor: 'rgba(0, 170, 255, 0.2)' }];
+        return [
+          ...baseStyle,
+          {
+            backgroundColor: colors.primaryDim,
+            borderWidth: 1,
+            borderColor: 'rgba(0, 170, 255, 0.2)',
+          },
+        ];
       case 'ghost':
         return [...baseStyle, { backgroundColor: 'transparent' }];
       case 'glass':
-        return [...baseStyle, { backgroundColor: colors.fillTertiary, borderWidth: 1, borderColor: colors.separator }];
+        return [
+          ...baseStyle,
+          {
+            backgroundColor: colors.fillTertiary,
+            borderWidth: 1,
+            borderColor: colors.separator,
+          },
+        ];
       default:
         return [...baseStyle, { backgroundColor: colors.primary }];
     }
@@ -57,49 +110,69 @@ export default function PrimaryButton({
     }
   };
 
+  const fontSize = size === 'small' 
+    ? scaleFont(14) 
+    : size === 'large' 
+      ? scaleFont(17) 
+      : scaleFont(15);
+
   return (
-    <TouchableOpacity
+    <Animated.View
       style={[
-        ...getButtonStyle(),
-        disabled && styles.disabled,
         !fullWidth && styles.autoWidth,
+        { transform: [{ scale: scaleAnim }] },
         style,
       ]}
-      onPress={handlePress}
-      disabled={disabled || loading}
-      activeOpacity={0.8}
     >
-      {loading ? (
-        <ActivityIndicator color={getTextColor()} size="small" />
-      ) : (
-        <View style={styles.content}>
-          {icon && <View style={styles.iconWrapper}>{icon}</View>}
-          <Text
-            style={[
-              styles.text,
-              size === 'small' && styles.textSmall,
-              { color: getTextColor() },
-              textStyle,
-            ]}
-          >
-            {title}
-          </Text>
-        </View>
-      )}
-    </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          ...getButtonStyle(),
+          disabled && styles.disabled,
+        ]}
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled || loading}
+        activeOpacity={1}
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityState={{ disabled: disabled || loading }}
+      >
+        {loading ? (
+          <ActivityIndicator color={getTextColor()} size="small" />
+        ) : (
+          <View style={styles.content}>
+            {icon && <View style={styles.iconWrapper}>{icon}</View>}
+            <Text
+              style={[
+                styles.text,
+                size === 'small' && styles.textSmall,
+                { color: getTextColor(), fontSize },
+                textStyle,
+              ]}
+            >
+              {title}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    height: 56,
     borderRadius: borderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   buttonSmall: {
-    height: 44,
     paddingHorizontal: 16,
   },
   disabled: {
@@ -116,7 +189,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   text: {
-    fontSize: 17,
     fontWeight: '600',
     letterSpacing: -0.2,
   },
