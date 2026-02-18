@@ -54,11 +54,12 @@ export default function DoorCard({ door, onPress, onLongPress, index = 0 }) {
   }, [index]);
 
   const handlePress = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Haptic disabled for better performance on low-end devices
     onPress?.(door);
   };
 
   const handleLongPress = async () => {
+    // Only haptic on long press (intentional action)
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onLongPress?.(door);
   };

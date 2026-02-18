@@ -40,24 +40,7 @@ export default function AnimatedThemeSwitch({ size = 'medium', style }) {
   }, [isDark]);
 
   const handlePress = async () => {
-    // Haptic feedback
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
-    // Press animation
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 0.85,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 100,
-        friction: 6,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
+    // Haptic disabled for regular clicks
     toggleTheme();
   };
 

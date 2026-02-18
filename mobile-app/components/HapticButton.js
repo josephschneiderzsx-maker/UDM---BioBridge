@@ -81,7 +81,7 @@ export default function HapticButton({
   };
 
   const handlePress = async () => {
-    await triggerHaptic();
+    // Haptic disabled - only use for important actions (unlock door)
     onPress?.();
   };
 

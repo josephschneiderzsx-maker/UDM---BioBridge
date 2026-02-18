@@ -51,7 +51,7 @@ export default function PrimaryButton({
   };
 
   const handlePress = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Haptic disabled for regular clicks - only on unlock
     onPress?.();
   };
 
