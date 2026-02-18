@@ -225,8 +225,9 @@ class ResponsiveTestSuite {
                 usesResponsiveVars ? "MainTabs uses new responsive variables" : "Missing responsive variable usage");
 
             // Check for tab bar responsive dimensions
-            const hasTabBarResponsive = appContent.includes('tabBarHeight()') &&
-                                      appContent.includes('floatingMargin()');
+            const hasTabBarResponsive = appContent.includes('getTabBarHeight') &&
+                                      appContent.includes('floatingMargin()') &&
+                                      appContent.includes('tabBarHeight = getTabBarHeight()');
             this.logTest("App.js Tab Bar Responsive", hasTabBarResponsive,
                 hasTabBarResponsive ? "Tab bar uses responsive dimensions" : "Missing tab bar responsiveness");
 
