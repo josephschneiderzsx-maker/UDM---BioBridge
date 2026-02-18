@@ -180,6 +180,7 @@ function AccountStack() {
       <Stack.Screen name="UsersList" component={UsersListScreen} />
       <Stack.Screen name="CreateUser" component={CreateUserScreen} />
       <Stack.Screen name="UserPermissions" component={UserPermissionsScreen} />
+      <Stack.Screen name="WidgetSettings" component={WidgetSettingsScreen} />
     </Stack.Navigator>
   );
 }
