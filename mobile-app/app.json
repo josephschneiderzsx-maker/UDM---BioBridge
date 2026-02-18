@@ -19,19 +19,31 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#000000"
+        "backgroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000",
+        "monochromeImage": "./assets/adaptive-icon.png"
       },
       "splash": {
-        "image": "./assets/adaptive-icon.png",
+        "image": "./assets/splash.png",
         "resizeMode": "contain",
         "backgroundColor": "#000000"
       },
-      "package": "com.urzis.pass"
+      "package": "com.urzis.pass",
+      "permissions": [
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "VIBRATE",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
     },
     "extra": {
       "eas": {
         "projectId": "urzis-pass"
       }
-    }
+    },
+    "plugins": [
+      "expo-local-authentication"
+    ]
   }
 }
