@@ -53,6 +53,8 @@ export default function DoorControlScreen({ route, navigation }) {
     isSmallPhone,
     isTablet,
     buttonHeight,
+    tabBarPadding,
+    isLowEndDevice,
   } = useResponsive();
 
   const { door } = route.params;
@@ -63,8 +65,14 @@ export default function DoorControlScreen({ route, navigation }) {
   const [licenseStatus, setLicenseStatus] = useState(null);
   const [notifyEnabled, setNotifyEnabled] = useState(false);
 
-  // Responsive button size
-  const BUTTON_SIZE = isSmallPhone ? Math.min(width * 0.4, 140) : isTablet ? Math.min(width * 0.35, 200) : Math.min(width * 0.45, 180);
+  // Responsive button size - smaller on low-end devices
+  const BUTTON_SIZE = isLowEndDevice 
+    ? Math.min(width * 0.35, 120) 
+    : isSmallPhone 
+      ? Math.min(width * 0.4, 140) 
+      : isTablet 
+        ? Math.min(width * 0.35, 200) 
+        : Math.min(width * 0.45, 180);
 
   const scaleAnim = useRef(new Animated.Value(0.96)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -357,8 +365,9 @@ export default function DoorControlScreen({ route, navigation }) {
   const ring2Opacity = ring2Anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 0.3, 0] });
   const lockRotation = lockRotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-20deg'] });
 
-  const TOP_BAR_HEIGHT = isSmallPhone ? 80 : 100;
-  const actionButtonHeight = isSmallPhone ? 44 : 50;
+  const TOP_BAR_HEIGHT = isLowEndDevice ? 70 : isSmallPhone ? 80 : 100;
+  const actionButtonHeight = isLowEndDevice ? 40 : isSmallPhone ? 44 : 50;
+  const ACTIONS_BOTTOM_MARGIN = tabBarPadding() + 10;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -504,7 +513,7 @@ export default function DoorControlScreen({ route, navigation }) {
         )}
 
         {/* Actions */}
-        <View style={[styles.actions, { backgroundColor: colors.surface, borderColor: colors.separator, height: actionButtonHeight }]}>
+        <View style={[styles.actions, { backgroundColor: colors.surface, borderColor: colors.separator, height: actionButtonHeight, marginBottom: ACTIONS_BOTTOM_MARGIN }]}>
           <TouchableOpacity style={styles.actionButton} onPress={closeDoor} disabled={loading} activeOpacity={0.7}>
             <X size={iconSize(16)} color={colors.textPrimary} strokeWidth={2.5} />
             <Text style={[styles.actionText, { color: colors.textPrimary, fontSize: scaleFont(14) }]}>Lock</Text>
