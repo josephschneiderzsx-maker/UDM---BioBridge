@@ -19,25 +19,46 @@ import PrimaryButton from '../components/PrimaryButton';
 import Logo from '../components/Logo';
 import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
+import useResponsive from '../hooks/useResponsive';
 
 export default function LoginScreen({ navigation }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const {
+    scaleFont,
+    spacing: rSpacing,
+    isSmallPhone,
+    isTablet,
+    contentMaxWidth,
+    buttonHeight,
+  } = useResponsive();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [tenant, setTenant] = useState('');
   const [loading, setLoading] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const slideAnim = useRef(new Animated.Value(40)).current;
+  const logoScaleAnim = useRef(new Animated.Value(0.9)).current;
 
   useEffect(() => {
     loadSavedTenant();
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 450,
-        useNativeDriver: true,
-      }),
+    
+    // Staggered entrance animation
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.spring(logoScaleAnim, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+      ]),
       Animated.spring(slideAnim, {
         toValue: 0,
         tension: 50,
@@ -75,6 +96,9 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
+  const cardPadding = isSmallPhone ? 16 : isTablet ? 28 : 20;
+  const logoWidth = isSmallPhone ? 160 : isTablet ? 260 : 200;
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
@@ -82,7 +106,15 @@ export default function LoginScreen({ navigation }) {
         style={styles.keyboardView}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingHorizontal: rSpacing(24),
+              maxWidth: contentMaxWidth(),
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? contentMaxWidth() : '100%',
+            },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -91,32 +123,72 @@ export default function LoginScreen({ navigation }) {
               styles.content,
               {
                 opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
               },
             ]}
           >
-            <View style={styles.logoContainer}>
-              <Logo width={200} />
-            </View>
+            {/* Logo with scale animation */}
+            <Animated.View
+              style={[
+                styles.logoContainer,
+                {
+                  transform: [{ scale: logoScaleAnim }],
+                  marginBottom: rSpacing(24),
+                },
+              ]}
+            >
+              <Logo width={logoWidth} />
+            </Animated.View>
 
-            <Text style={[styles.title, { color: colors.textPrimary }]}>
+            {/* Title */}
+            <Text
+              style={[
+                styles.title,
+                {
+                  color: colors.textPrimary,
+                  fontSize: scaleFont(isSmallPhone ? 22 : 26),
+                },
+              ]}
+            >
               Welcome back
             </Text>
-            <Text style={[styles.description, { color: colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.description,
+                {
+                  color: colors.textSecondary,
+                  fontSize: scaleFont(isSmallPhone ? 14 : 15),
+                  marginBottom: rSpacing(24),
+                },
+              ]}
+            >
               Sign in to manage your doors
             </Text>
 
-            <View style={[styles.card, {
-              backgroundColor: colors.surface,
-              borderColor: colors.separator,
-              shadowColor: '#000',
-            }]}>
+            {/* Form Card with slide animation */}
+            <Animated.View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                  padding: cardPadding,
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}
+            >
               <Input
                 label="Organization"
                 value={tenant}
                 onChangeText={setTenant}
                 placeholder="Enter organization ID"
-                icon={<Building2 size={18} color={colors.textTertiary} strokeWidth={1.5} />}
+                icon={
+                  <Building2
+                    size={isSmallPhone ? 16 : 18}
+                    color={colors.textTertiary}
+                    strokeWidth={1.5}
+                  />
+                }
+                testID="login-tenant-input"
               />
 
               <Input
@@ -125,7 +197,15 @@ export default function LoginScreen({ navigation }) {
                 onChangeText={setEmail}
                 placeholder="your@email.com"
                 keyboardType="email-address"
-                icon={<Mail size={18} color={colors.textTertiary} strokeWidth={1.5} />}
+                autoComplete="email"
+                icon={
+                  <Mail
+                    size={isSmallPhone ? 16 : 18}
+                    color={colors.textTertiary}
+                    strokeWidth={1.5}
+                  />
+                }
+                testID="login-email-input"
               />
 
               <Input
@@ -134,25 +214,49 @@ export default function LoginScreen({ navigation }) {
                 onChangeText={setPassword}
                 placeholder="Enter your password"
                 secureTextEntry
-                icon={<Lock size={18} color={colors.textTertiary} strokeWidth={1.5} />}
+                autoComplete="password"
+                icon={
+                  <Lock
+                    size={isSmallPhone ? 16 : 18}
+                    color={colors.textTertiary}
+                    strokeWidth={1.5}
+                  />
+                }
+                testID="login-password-input"
               />
 
-              <View style={styles.buttonContainer}>
+              <View style={[styles.buttonContainer, { marginTop: rSpacing(16) }]}>
                 <PrimaryButton
                   title="Sign In"
                   onPress={handleLogin}
                   loading={loading}
+                  size={isSmallPhone ? 'medium' : 'large'}
                 />
               </View>
-            </View>
+            </Animated.View>
 
-            <View style={styles.footer}>
+            {/* Footer */}
+            <Animated.View
+              style={[
+                styles.footer,
+                {
+                  marginTop: rSpacing(32),
+                  opacity: fadeAnim,
+                },
+              ]}
+            >
               <Image
                 source={require('../assets/urzis-logo.png')}
-                style={styles.footerLogo}
+                style={[
+                  styles.footerLogo,
+                  {
+                    width: isSmallPhone ? 70 : 90,
+                    height: isSmallPhone ? 24 : 30,
+                  },
+                ]}
                 resizeMode="contain"
               />
-            </View>
+            </Animated.View>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -169,7 +273,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxxl,
     justifyContent: 'center',
   },
@@ -177,42 +280,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoContainer: {
-    marginBottom: spacing.xl,
     alignItems: 'center',
   },
   title: {
-    fontSize: 26,
     fontWeight: '700',
     letterSpacing: -0.5,
     marginBottom: 6,
     textAlign: 'center',
   },
   description: {
-    fontSize: 15,
     lineHeight: 22,
-    marginBottom: spacing.xl,
     textAlign: 'center',
   },
   card: {
     width: '100%',
-    borderRadius: 20,
+    borderRadius: 24,
     borderWidth: 1,
-    padding: spacing.lg,
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 16,
     elevation: 4,
   },
-  buttonContainer: {
-    marginTop: spacing.md,
-  },
+  buttonContainer: {},
   footer: {
-    marginTop: spacing.xxl,
     alignItems: 'center',
     opacity: 0.5,
   },
-  footerLogo: {
-    width: 90,
-    height: 30,
-  },
+  footerLogo: {},
 });

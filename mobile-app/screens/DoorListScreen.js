@@ -13,24 +13,33 @@ import {
 } from 'react-native';
 import GlassBackground from '../components/GlassBackground';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Shield, Sun, Moon, Radio } from 'lucide-react-native';
+import { Shield, Radio } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import api from '../services/api';
 import DoorCard from '../components/DoorCard';
+import { DoorCardSkeleton } from '../components/SkeletonLoader';
+import AnimatedThemeSwitch from '../components/AnimatedThemeSwitch';
 import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRootNavigation } from '../contexts/RootNavigationContext';
+import useResponsive from '../hooks/useResponsive';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Logo from '../components/Logo';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const HEADER_TOP_PADDING = Math.max(spacing.xl, SCREEN_HEIGHT * 0.02) + (Platform.OS === 'android' ? 10 : 0);
-const FLOATING_HEADER_HEIGHT = 160;
-const TAB_BAR_PADDING_BOTTOM = 100;
 
 export default function DoorListScreen({ navigation }) {
-  const { colors, isDark, toggleTheme } = useTheme();
+  const { colors, isDark } = useTheme();
   const { resetToLogin } = useRootNavigation();
+  const {
+    scaleFont,
+    spacing: rSpacing,
+    isSmallPhone,
+    isTablet,
+    contentMaxWidth,
+    headerHeight,
+  } = useResponsive();
+
   const [doors, setDoors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,12 +49,19 @@ export default function DoorListScreen({ navigation }) {
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerSlideAnim = useRef(new Animated.Value(16)).current;
+  const listFadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Responsive header height
+  const HEADER_TOP_PADDING = Math.max(rSpacing(24), SCREEN_HEIGHT * 0.02) + (Platform.OS === 'android' ? 10 : 0);
+  const FLOATING_HEADER_HEIGHT = isSmallPhone ? 140 : isTablet ? 180 : 160;
+  const TAB_BAR_PADDING_BOTTOM = isSmallPhone ? 90 : 100;
 
   useEffect(() => {
     loadDoors();
     loadQuota();
     checkAdminStatus();
     loadPendingDevices();
+    
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -87,7 +103,6 @@ export default function DoorListScreen({ navigation }) {
       const devices = await api.getDiscoveredDevices();
       setPendingDevicesCount(devices.length);
     } catch {
-      // Not admin or feature not available — ignore
       setPendingDevicesCount(0);
     }
   };
@@ -106,6 +121,13 @@ export default function DoorListScreen({ navigation }) {
       setLoading(true);
       const doorsList = await api.getDoors();
       setDoors(doorsList);
+      
+      // Animate list fade in
+      Animated.timing(listFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
     } catch (error) {
       Alert.alert('Error', error.message, [
         {
@@ -123,7 +145,8 @@ export default function DoorListScreen({ navigation }) {
     }
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRefreshing(true);
     loadDoors();
   };
@@ -176,31 +199,36 @@ export default function DoorListScreen({ navigation }) {
     );
   };
 
-  const handleToggleTheme = () => {
-    toggleTheme();
-  };
-
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <View style={styles.emptyIcon}>
-        <Shield size={28} color={colors.textTertiary} strokeWidth={1.5} />
+      <View style={[styles.emptyIcon, { backgroundColor: colors.fillTertiary }]}>
+        <Shield size={isSmallPhone ? 24 : 28} color={colors.textTertiary} strokeWidth={1.5} />
       </View>
-      <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No doors</Text>
-      <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+      <Text style={[styles.emptyTitle, { color: colors.textPrimary, fontSize: scaleFont(18) }]}>
+        No doors
+      </Text>
+      <Text style={[styles.emptyText, { color: colors.textSecondary, fontSize: scaleFont(14) }]}>
         You don't have access to any doors yet.{'\n'}
         Contact your administrator.
       </Text>
     </View>
   );
 
-  const renderLoader = () => (
-    <View style={styles.loaderContainer}>
-      <View style={styles.loaderDots}>
-        <View style={[styles.loaderDot, { opacity: 0.3, backgroundColor: colors.primary }]} />
-        <View style={[styles.loaderDot, { opacity: 0.6, backgroundColor: colors.primary }]} />
-        <View style={[styles.loaderDot, { opacity: 1, backgroundColor: colors.primary }]} />
-      </View>
+  const renderSkeletonLoader = () => (
+    <View style={[styles.skeletonContainer, { paddingHorizontal: rSpacing(24) }]}>
+      {[0, 1, 2, 3].map((index) => (
+        <DoorCardSkeleton key={index} />
+      ))}
     </View>
+  );
+
+  const renderItem = ({ item, index }) => (
+    <DoorCard
+      door={item}
+      onPress={handleDoorPress}
+      onLongPress={handleDoorLongPress}
+      index={index}
+    />
   );
 
   return (
@@ -210,42 +238,72 @@ export default function DoorListScreen({ navigation }) {
         <Animated.View
           style={[
             styles.headerFloating,
-            { transform: [{ translateY: headerSlideAnim }] },
+            {
+              transform: [{ translateY: headerSlideAnim }],
+              borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+            },
           ]}
           pointerEvents="box-none"
         >
-          <GlassBackground intensity={80} tint="light" style={styles.headerBlur} />
-          <View style={styles.header}>
+          <GlassBackground
+            intensity={80}
+            tint={isDark ? 'dark' : 'light'}
+            style={styles.headerBlur}
+          />
+          <View style={[styles.header, { paddingTop: HEADER_TOP_PADDING }]}>
             <View style={styles.headerTop}>
               <View>
-                <Logo width={130} />
-                <Text style={[styles.greeting, { color: colors.textPrimary }]}>Doors</Text>
+                <Logo width={isSmallPhone ? 110 : isTablet ? 150 : 130} />
+                <Text
+                  style={[
+                    styles.greeting,
+                    {
+                      color: colors.textPrimary,
+                      fontSize: scaleFont(isSmallPhone ? 26 : 32),
+                    },
+                  ]}
+                >
+                  Doors
+                </Text>
               </View>
               <View style={styles.headerActions}>
-                <TouchableOpacity
-                  style={[styles.themeButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-                  onPress={handleToggleTheme}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  {isDark ? (
-                    <Sun size={16} color={colors.textSecondary} strokeWidth={2.5} />
-                  ) : (
-                    <Moon size={16} color={colors.textSecondary} strokeWidth={2.5} />
-                  )}
-                </TouchableOpacity>
+                <AnimatedThemeSwitch size={isSmallPhone ? 'small' : 'medium'} />
               </View>
             </View>
+            
             <View style={styles.statsRow}>
-              <View style={[styles.statPill, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
-                <Text style={[styles.statValue, { color: colors.textPrimary }]}>{doors.length}</Text>
-                <Text style={[styles.statLabel, { color: colors.textTertiary }]}>
+              <View
+                style={[
+                  styles.statPill,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                  },
+                ]}
+              >
+                <Text style={[styles.statValue, { color: colors.textPrimary, fontSize: scaleFont(13) }]}>
+                  {doors.length}
+                </Text>
+                <Text style={[styles.statLabel, { color: colors.textTertiary, fontSize: scaleFont(13) }]}>
                   {doors.length === 1 ? 'door' : 'doors'}
                 </Text>
               </View>
               {quota && (
-                <View style={[styles.statPill, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
-                  <Text style={[styles.statValue, { color: colors.textPrimary }]}>{quota.used}/{quota.quota}</Text>
-                  <Text style={[styles.statLabel, { color: colors.textTertiary }]}>quota</Text>
+                <View
+                  style={[
+                    styles.statPill,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                    },
+                  ]}
+                >
+                  <Text style={[styles.statValue, { color: colors.textPrimary, fontSize: scaleFont(13) }]}>
+                    {quota.used}/{quota.quota}
+                  </Text>
+                  <Text style={[styles.statLabel, { color: colors.textTertiary, fontSize: scaleFont(13) }]}>
+                    quota
+                  </Text>
                 </View>
               )}
             </View>
@@ -253,46 +311,65 @@ export default function DoorListScreen({ navigation }) {
         </Animated.View>
 
         <View style={[styles.contentWrap, { paddingTop: FLOATING_HEADER_HEIGHT }]}>
+          {/* Pending devices banner */}
           {isAdmin && pendingDevicesCount > 0 && (
             <TouchableOpacity
-              style={[styles.discoveredBanner, { backgroundColor: colors.primaryDim, borderColor: colors.primary }]}
+              style={[
+                styles.discoveredBanner,
+                {
+                  backgroundColor: colors.primaryDim,
+                  borderColor: colors.primary,
+                  marginHorizontal: rSpacing(24),
+                },
+              ]}
               onPress={() => navigation.navigate('DiscoveredDevices')}
               activeOpacity={0.7}
             >
-              <Radio size={16} color={colors.primary} strokeWidth={2} />
-              <Text style={[styles.discoveredBannerText, { color: colors.primary }]}>
+              <Radio size={isSmallPhone ? 14 : 16} color={colors.primary} strokeWidth={2} />
+              <Text
+                style={[
+                  styles.discoveredBannerText,
+                  { color: colors.primary, fontSize: scaleFont(13) },
+                ]}
+              >
                 {pendingDevicesCount} new {pendingDevicesCount === 1 ? 'door' : 'doors'} detected — Tap to review
               </Text>
             </TouchableOpacity>
           )}
 
+          {/* Content */}
           {loading && doors.length === 0 ? (
-            renderLoader()
+            renderSkeletonLoader()
           ) : doors.length === 0 ? (
             renderEmptyState()
           ) : (
-            <FlatList
-              data={doors}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item, index }) => (
-                <DoorCard
-                  door={item}
-                  onPress={handleDoorPress}
-                  onLongPress={handleDoorLongPress}
-                  index={index}
-                />
-              )}
-              contentContainerStyle={[styles.listContent, { paddingBottom: TAB_BAR_PADDING_BOTTOM }]}
-              showsVerticalScrollIndicator={false}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={handleRefresh}
-                  tintColor={colors.primary}
-                  colors={[colors.primary]}
-                />
-              }
-            />
+            <Animated.View style={{ flex: 1, opacity: listFadeAnim }}>
+              <FlatList
+                data={doors}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={renderItem}
+                contentContainerStyle={[
+                  styles.listContent,
+                  {
+                    paddingHorizontal: rSpacing(24),
+                    paddingBottom: TAB_BAR_PADDING_BOTTOM,
+                    maxWidth: contentMaxWidth(),
+                    alignSelf: isTablet ? 'center' : 'stretch',
+                    width: isTablet ? contentMaxWidth() : '100%',
+                  },
+                ]}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={handleRefresh}
+                    tintColor={colors.primary}
+                    colors={[colors.primary]}
+                    progressBackgroundColor={colors.surface}
+                  />
+                }
+              />
+            </Animated.View>
           )}
         </View>
       </Animated.View>
@@ -315,11 +392,10 @@ const styles = StyleSheet.create({
     zIndex: 10,
     borderRadius: 30,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
   },
@@ -328,7 +404,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: spacing.xl,
-    paddingTop: HEADER_TOP_PADDING,
     paddingBottom: spacing.md,
   },
   contentWrap: {
@@ -341,7 +416,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   greeting: {
-    fontSize: 32,
     fontWeight: '700',
     letterSpacing: -0.5,
   },
@@ -350,14 +424,6 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: 'center',
     marginTop: 4,
-  },
-  themeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
   },
   statsRow: {
     flexDirection: 'row',
@@ -373,30 +439,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statValue: {
-    fontSize: 13,
     fontWeight: '700',
   },
-  statLabel: {
-    fontSize: 13,
-  },
+  statLabel: {},
   listContent: {
-    paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
     paddingBottom: spacing.xxxl,
   },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loaderDots: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  loaderDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  skeletonContainer: {
+    paddingTop: spacing.md,
   },
   emptyContainer: {
     flex: 1,
@@ -407,18 +458,17 @@ const styles = StyleSheet.create({
   emptyIcon: {
     width: 64,
     height: 64,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
   emptyTitle: {
-    fontSize: 18,
     fontWeight: '600',
     marginBottom: spacing.sm,
     letterSpacing: -0.3,
   },
   emptyText: {
-    fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -426,7 +476,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginHorizontal: spacing.xl,
     marginBottom: spacing.sm,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
@@ -434,7 +483,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   discoveredBannerText: {
-    fontSize: 13,
     fontWeight: '600',
     flex: 1,
   },
