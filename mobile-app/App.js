@@ -187,16 +187,26 @@ function AccountStack() {
 
 function MainTabs() {
   const { colors, isDark } = useTheme();
-  const { isSmallPhone, isTablet, scaleFont, isLowEndDevice } = useResponsive();
+  const { 
+    isSmallPhone, 
+    isVerySmallPhone,
+    isTablet, 
+    scaleFont, 
+    isLowEndDevice,
+    isCompactMode,
+    tabBarHeight: getTabBarHeight,
+    floatingMargin,
+    hasLargeFontScale,
+  } = useResponsive();
 
-  // Responsive tab bar dimensions - smaller for low-end devices
-  const tabBarHeight = isLowEndDevice ? 52 : isSmallPhone ? 56 : isTablet ? 72 : 64;
-  const tabBarMargin = isLowEndDevice ? 12 : isSmallPhone ? 14 : 20;
+  // Responsive tab bar dimensions - adapté à la densité et taille de police
+  const tabBarHeight = getTabBarHeight();
+  const tabBarMargin = floatingMargin();
   const tabBarBottom = Platform.OS === 'ios' 
-    ? (isSmallPhone ? 20 : 28) 
-    : (isLowEndDevice ? 8 : isSmallPhone ? 10 : 16);
-  const iconSize = isLowEndDevice ? 18 : isSmallPhone ? 20 : isTablet ? 26 : 22;
-  const labelSize = isLowEndDevice ? 9 : isSmallPhone ? 10 : isTablet ? 14 : 12;
+    ? (isCompactMode ? 16 : isSmallPhone ? 20 : 28) 
+    : (isCompactMode ? 6 : isLowEndDevice ? 8 : isSmallPhone ? 10 : 14);
+  const iconSizeVal = isCompactMode ? 16 : isLowEndDevice ? 18 : isSmallPhone ? 20 : isTablet ? 26 : 22;
+  const labelSize = isCompactMode ? 8 : isLowEndDevice ? 9 : isSmallPhone ? 10 : isTablet ? 13 : 11;
 
   return (
     <Tab.Navigator
