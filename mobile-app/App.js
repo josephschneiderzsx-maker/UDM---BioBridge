@@ -256,7 +256,7 @@ function MainTabs() {
           title: 'Doors',
           tabBarIcon: ({ color, focused }) => (
             <Animated.View style={{ transform: [{ scale: focused ? 1.1 : 1 }] }}>
-              <DoorOpen size={iconSize} color={color} strokeWidth={focused ? 2.5 : 2} />
+              <DoorOpen size={iconSizeVal} color={color} strokeWidth={focused ? 2.5 : 2} />
             </Animated.View>
           ),
         }}
