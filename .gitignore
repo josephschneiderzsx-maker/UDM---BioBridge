@@ -37,3 +37,7 @@ nul
 !UDM/SERVER/**
 !UDM/AGENT/
 !UDM/AGENT/**
+-e 
+# Environment files
+*.env
+*.env.*
