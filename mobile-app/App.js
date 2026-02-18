@@ -268,7 +268,7 @@ function MainTabs() {
           title: 'Add',
           tabBarIcon: ({ color, focused }) => (
             <Animated.View style={{ transform: [{ scale: focused ? 1.1 : 1 }] }}>
-              <Plus size={iconSize} color={color} strokeWidth={focused ? 3 : 2.5} />
+              <Plus size={iconSizeVal} color={color} strokeWidth={focused ? 3 : 2.5} />
             </Animated.View>
           ),
         }}
