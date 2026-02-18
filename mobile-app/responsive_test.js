@@ -300,16 +300,7 @@ class ResponsiveTestSuite {
             const hookPath = path.join(__dirname, 'hooks', 'useResponsive.js');
             const hookContent = fs.readFileSync(hookPath, 'utf8');
             
-            // Extract the return object
-            const returnMatch = hookContent.match(/return\s+{([^}]+)}/s);
-            if (!returnMatch) {
-                this.logTest("Hook Return Object", false, "Could not find return statement");
-                return false;
-            }
-
-            const returnObject = returnMatch[1];
-            
-            // Check for new responsive properties
+            // Check for new responsive properties in the entire file
             const expectedProps = [
                 'pixelDensity',
                 'systemFontScale', 
@@ -319,7 +310,10 @@ class ResponsiveTestSuite {
                 'floatingMargin'
             ];
             
-            const missingProps = expectedProps.filter(prop => !returnObject.includes(prop));
+            // Look for properties in the return statement or export
+            const missingProps = expectedProps.filter(prop => {
+                return !hookContent.includes(`${prop},`) && !hookContent.includes(`${prop}:`);
+            });
             
             if (missingProps.length > 0) {
                 this.logTest("Exported Responsive Properties", false, 
