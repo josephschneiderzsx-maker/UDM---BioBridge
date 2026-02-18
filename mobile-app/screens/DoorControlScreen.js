@@ -377,7 +377,7 @@ export default function DoorControlScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.topBarFloating}>
+      <View style={[styles.topBarFloating, { left: FLOATING_MARGIN, right: FLOATING_MARGIN }]}>
         <GlassBackground intensity={80} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
         <View style={styles.dragIndicator}>
           <View style={[styles.dragHandle, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)' }]} />
@@ -387,7 +387,7 @@ export default function DoorControlScreen({ route, navigation }) {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <ChevronDown size={iconSize(20)} color={colors.textTertiary} strokeWidth={2.5} />
+          <ChevronDown size={iconSize(18)} color={colors.textTertiary} strokeWidth={2.5} />
         </TouchableOpacity>
       </View>
 
