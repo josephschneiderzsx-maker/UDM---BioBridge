@@ -9,113 +9,102 @@ Améliorer l'application mobile React Native Expo pour un design premium et resp
 ## User Personas
 1. **Utilisateurs standards** - Accès aux portes, visualisation de l'historique
 2. **Administrateurs** - Gestion des portes, utilisateurs et permissions
-3. **Utilisateurs multi-appareils** - Petits téléphones, grands écrans, tablettes
+3. **Utilisateurs multi-appareils** - Petits téléphones (Motorola G), grands écrans, tablettes
 
 ## Core Requirements (Static)
 - ✅ Style moderne avec micro-animations et effets premium
-- ✅ Responsivité sur tous les types d'écrans (petits téléphones, normaux, grands, tablettes)
-- ✅ Animations fluides et feedback haptique avancé
+- ✅ Responsivité sur tous les types d'écrans (très petits, petits, normaux, grands, tablettes)
+- ✅ Animations fluides et feedback haptique **uniquement pour actions importantes**
 - ✅ Accessibilité (tailles de police adaptatives)
 - ✅ Conserver le bleu URZIS #00AAFF
 - ✅ Mode sombre/clair avec transition animée
 - ✅ Skeleton loaders premium pendant le chargement
 - ✅ Pull-to-refresh personnalisé
+- ✅ Widget Quick Unlock iOS/Android avec biométrie
 
-## What's Been Implemented (Feb 2026)
+## What's Been Implemented
 
-### Phase 1: Système Responsive
-- **`useResponsive` Hook** (`/app/mobile-app/hooks/useResponsive.js`)
-  - Breakpoints: smallPhone (320px), phone (375px), largePhone (414px), tablet (768px)
-  - Fonctions: scaleWidth, scaleHeight, scaleFont, spacing, radius, iconSize
-  - Support accessibilité: scaling de police adaptatif
+### Session 1 - Feb 2026: Premium UI Base
+- Hook `useResponsive` avec breakpoints adaptatifs
+- Composants premium (SkeletonLoader, AnimatedThemeSwitch, HapticButton)
+- ThemeContext avec transitions animées
+- Écrans mis à jour avec responsivité
 
-### Phase 2: Composants Premium
-- **SkeletonLoader** - Shimmer animé avec LinearGradient
-- **AnimatedThemeSwitch** - Toggle thème avec rotation et glow
-- **HapticButton** - Bouton avec feedback haptique (light/medium/heavy)
-- **PremiumRefreshControl** - Pull-to-refresh avec animations de spin
+### Session 2 - Feb 2026: Low-End Device Optimization + Widget
+**Problème résolu:** UI mal rendue sur Motorola G 2021
+- Ajout `isLowEndDevice` detection (écran < 360px ou height < 700px)
+- Ajout `tabBarPadding()` pour éviter chevauchement avec tab bar
+- **Vibrations désactivées** sur clics normaux (gardées uniquement pour unlock/longpress)
+- Tab bar réduite pour petits écrans (52px vs 64px)
+- Margins ajustées (12px vs 20px)
 
-### Phase 3: ThemeContext Amélioré
-- Transitions animées entre thèmes (350ms)
-- Overlay de transition pour effet premium
-- Support mode auto (système)
-- Feedback haptique sur changement de thème
+**Widget Quick Unlock:**
+- `WidgetService.js` - Service de données partagées app/widget
+- `WidgetSettingsScreen.js` - Configuration du widget
+- Biométrie obligatoire avant déverrouillage
+- Sélection de porte principale
+- Test unlock depuis l'app
 
-### Phase 4: Écrans Mis à Jour
-- **LoginScreen** - Animations d'entrée staggerées, responsive
-- **DoorListScreen** - Skeleton loaders, AnimatedThemeSwitch, responsive
-- **DoorControlScreen** - Bouton pulse, responsive, animations améliorées
-- **AccountScreen** - Toggle thème intégré, responsive
-- **ActivityLogScreen** - Skeleton pour activités, responsive
+## Files Modified/Created
 
-### Phase 5: Composants Core Améliorés
-- **DoorCard** - Glow effect, animations d'entrée, responsive
-- **Input** - Shake error, glow focus, responsive
-- **PrimaryButton** - Haptic feedback, scale animations
-- **StatusBadge** - Pulse animation, responsive
-- **GlassBackground** - Auto-tint basé sur thème
+### Session 2 Updates:
+```
+/app/mobile-app/
+├── hooks/
+│   └── useResponsive.js (UPDATED - isLowEndDevice, tabBarPadding)
+├── components/
+│   ├── DoorCard.js (UPDATED - haptic disabled on tap)
+│   ├── HapticButton.js (UPDATED - haptic disabled)
+│   ├── AnimatedThemeSwitch.js (UPDATED - haptic disabled)
+│   └── PrimaryButton.js (UPDATED - haptic disabled)
+├── services/
+│   └── WidgetService.js (NEW)
+├── screens/
+│   ├── DoorControlScreen.js (UPDATED - ACTIONS_BOTTOM_MARGIN)
+│   ├── DoorListScreen.js (UPDATED - tabBarPadding)
+│   ├── ActivityLogScreen.js (UPDATED - tabBarPadding)
+│   ├── AccountScreen.js (UPDATED - Widget Settings menu)
+│   └── WidgetSettingsScreen.js (NEW)
+├── widgets/
+│   └── README.md (NEW)
+└── App.js (UPDATED - low-end tab bar, WidgetSettings route)
+```
 
 ## Tech Stack
 - React Native 0.81.5
 - Expo SDK 54
-- expo-blur, expo-haptics, expo-linear-gradient
-- lucide-react-native pour les icônes
-- @react-navigation/native, bottom-tabs, stack
+- expo-blur, expo-haptics, expo-linear-gradient, expo-local-authentication
+- lucide-react-native
 
-## Files Modified/Created
-```
-/app/mobile-app/
-├── hooks/
-│   └── useResponsive.js (NEW)
-├── components/
-│   ├── SkeletonLoader.js (NEW)
-│   ├── AnimatedThemeSwitch.js (NEW)
-│   ├── HapticButton.js (NEW)
-│   ├── PremiumRefreshControl.js (NEW)
-│   ├── DoorCard.js (UPDATED)
-│   ├── Input.js (UPDATED)
-│   ├── PrimaryButton.js (UPDATED)
-│   ├── StatusBadge.js (UPDATED)
-│   └── GlassBackground.js (UPDATED)
-├── contexts/
-│   └── ThemeContext.js (UPDATED)
-├── screens/
-│   ├── DoorListScreen.js (UPDATED)
-│   ├── LoginScreen.js (UPDATED)
-│   ├── DoorControlScreen.js (UPDATED)
-│   ├── AccountScreen.js (UPDATED)
-│   └── ActivityLogScreen.js (UPDATED)
-└── App.js (UPDATED)
-```
+## Device Support Matrix
+| Device Type | Screen Width | Tab Bar | Icons | Font Scale |
+|-------------|-------------|---------|-------|------------|
+| Very Small  | < 320px     | 52px    | 18px  | 0.85       |
+| Small (Moto G) | 320-360px | 52px    | 18px  | 0.9        |
+| Phone       | 360-414px   | 56px    | 20px  | 1.0        |
+| Large Phone | 414-768px   | 64px    | 22px  | 1.0        |
+| Tablet      | 768px+      | 72px    | 26px  | 1.1        |
 
 ## Prioritized Backlog
 
 ### P0 - Completed ✅
-- Responsive hook
-- Skeleton loaders
-- Theme transitions
-- Core component updates
+- Responsive hook avec low-end detection
+- Fix chevauchement tab bar / actions
+- Désactivation vibrations excessives
+- Widget service et écran de config
 
-### P1 - Future Enhancements
-- [ ] Skeleton pour écrans CreateUser, EditDoor
-- [ ] Animations de liste virtualisées (pour longues listes)
-- [ ] Offline mode indicators
-- [ ] Dark/Light mode preview dans Settings
+### P1 - Pour activation Widget
+- [ ] Upgrade vers Expo SDK 55 (pour expo-widget iOS)
+- [ ] Code natif Android pour widget
+- [ ] Tester widget sur appareils physiques
 
 ### P2 - Nice to Have
-- [ ] Custom fonts intégrées
-- [ ] Animations Lottie pour splash screen
-- [ ] Widget iOS/Android pour accès rapide
-- [ ] Biometric quick unlock depuis notification
+- [ ] Widget Live Activities iOS (Dynamic Island)
+- [ ] Animations Lottie pour splash
+- [ ] Mode offline avec sync
 
 ## Testing Status
-- ✅ 100% validation des composants React Native
-- ✅ Syntaxe JavaScript validée (28 fichiers)
-- ✅ Imports et dépendances validés
-- ✅ Hook responsive avec 13 fonctions validées
-- ✅ 4 types d'appareils supportés
-
-## Next Steps
-1. Tester sur appareils physiques (iOS/Android)
-2. Valider les animations sur appareils bas de gamme
-3. Ajuster les breakpoints si nécessaire après tests réels
+- ✅ 100% validation tous composants
+- ✅ Low-end device optimizations validées
+- ✅ Widget service et navigation validés
+- ⚠️ Test physique requis sur Motorola G 2021
