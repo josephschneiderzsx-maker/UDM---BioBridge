@@ -32,18 +32,31 @@ Améliorer l'application mobile React Native Expo pour un design premium et resp
 
 ### Session 2 - Feb 2026: Low-End Device Optimization + Widget
 **Problème résolu:** UI mal rendue sur Motorola G 2021
-- Ajout `isLowEndDevice` detection (écran < 360px ou height < 700px)
-- Ajout `tabBarPadding()` pour éviter chevauchement avec tab bar
-- **Vibrations désactivées** sur clics normaux (gardées uniquement pour unlock/longpress)
-- Tab bar réduite pour petits écrans (52px vs 64px)
-- Margins ajustées (12px vs 20px)
+- Ajout `isLowEndDevice` detection
+- Widget Quick Unlock avec biométrie
 
-**Widget Quick Unlock:**
-- `WidgetService.js` - Service de données partagées app/widget
-- `WidgetSettingsScreen.js` - Configuration du widget
-- Biométrie obligatoire avant déverrouillage
-- Sélection de porte principale
-- Test unlock depuis l'app
+### Session 3 - Feb 2026: Adaptation Automatique Densité/Police
+**Problème résolu:** L'app ne s'adaptait pas aux paramètres système (densité pixel, taille police)
+
+**Nouvelles détections automatiques:**
+- `pixelDensity` - Densité de l'écran via `PixelRatio.get()`
+- `systemFontScale` - Taille de police système via `PixelRatio.getFontScale()`
+- `hasLargeFontScale` - Détection grande police (> 1.15)
+- `hasHighDensity` - Détection haute densité (>= 3)
+- `isCompactMode` - Combinaison petit écran + grande police
+- `effectiveWidth` - Largeur ajustée pour haute densité
+
+**Nouvelles fonctions:**
+- `floatingMargin()` - Marges adaptatives pour headers/tab bar
+- `cappedFontScale` - Limite le scaling de police pour éviter les débordements
+
+**Comportement:**
+| Condition | Font Scale Cap | Spacing Factor | Floating Margin |
+|-----------|---------------|----------------|-----------------|
+| Compact Mode | 1.1 | 0.7 | 8px |
+| Small Phone | 1.3 | 0.8 | 12px |
+| Normal | 1.3 | 1.0 | 16px |
+| Tablet | 1.3 | 1.2 | 24px |
 
 ## Files Modified/Created
 
