@@ -370,9 +370,10 @@ export default function DoorControlScreen({ route, navigation }) {
   const ring2Opacity = ring2Anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 0.3, 0] });
   const lockRotation = lockRotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-20deg'] });
 
-  const TOP_BAR_HEIGHT = isLowEndDevice ? 70 : isSmallPhone ? 80 : 100;
-  const actionButtonHeight = isLowEndDevice ? 40 : isSmallPhone ? 44 : 50;
+  const TOP_BAR_HEIGHT = isCompactMode ? 60 : isLowEndDevice ? 70 : isSmallPhone ? 80 : 100;
+  const actionButtonHeight = isCompactMode ? 36 : isLowEndDevice ? 40 : isSmallPhone ? 44 : 50;
   const ACTIONS_BOTTOM_MARGIN = tabBarPadding() + 10;
+  const FLOATING_MARGIN = floatingMargin();
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
