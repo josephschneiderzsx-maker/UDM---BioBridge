@@ -233,17 +233,16 @@ class ReactNativeStructureValidator:
                 
                 # Check if file uses lucide icons
                 if "lucide-react-native" in content:
-                    # Extract import statement
-                    import_lines = [line.strip() for line in content.split('\n') 
-                                  if 'lucide-react-native' in line and 'import' in line]
+                    # Check for proper import pattern (handles multi-line imports)
+                    # Look for either "import ... from 'lucide-react-native'" or "} from 'lucide-react-native'"
+                    has_proper_import = (
+                        "import " in content and "from 'lucide-react-native'" in content
+                    ) or (
+                        "} from 'lucide-react-native'" in content
+                    )
                     
-                    if not import_lines:
+                    if not has_proper_import:
                         lucide_issues.append(f"{file_path.name}: Uses lucide but no proper import found")
-                    else:
-                        # Check if import syntax looks correct
-                        for import_line in import_lines:
-                            if not import_line.startswith("import"):
-                                lucide_issues.append(f"{file_path.name}: Malformed lucide import: {import_line}")
                         
             except Exception as e:
                 lucide_issues.append(f"Error reading {file_path.name}: {str(e)}")
