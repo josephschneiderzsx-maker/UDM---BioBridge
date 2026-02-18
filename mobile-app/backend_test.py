@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 
 class ReactNativeStructureValidator:
-    def __init__(self, root_path="/app"):
+    def __init__(self, root_path="/app/mobile-app"):
         self.root_path = Path(root_path)
         self.tests_run = 0
         self.tests_passed = 0
