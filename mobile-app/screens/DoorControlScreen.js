@@ -69,13 +69,15 @@ export default function DoorControlScreen({ route, navigation }) {
   const [notifyEnabled, setNotifyEnabled] = useState(false);
 
   // Responsive button size - smaller on low-end devices
-  const BUTTON_SIZE = isLowEndDevice 
-    ? Math.min(width * 0.35, 120) 
-    : isSmallPhone 
-      ? Math.min(width * 0.4, 140) 
-      : isTablet 
-        ? Math.min(width * 0.35, 200) 
-        : Math.min(width * 0.45, 180);
+  const BUTTON_SIZE = isCompactMode 
+    ? Math.min(width * 0.32, 110) 
+    : isLowEndDevice 
+      ? Math.min(width * 0.35, 120) 
+      : isSmallPhone 
+        ? Math.min(width * 0.4, 140) 
+        : isTablet 
+          ? Math.min(width * 0.35, 200) 
+          : Math.min(width * 0.45, 180);
 
   const scaleAnim = useRef(new Animated.Value(0.96)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
