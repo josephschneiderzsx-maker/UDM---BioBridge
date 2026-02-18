@@ -400,11 +400,11 @@ export default function DoorControlScreen({ route, navigation }) {
       >
         {/* Door Info */}
         <View style={styles.doorInfo}>
-          <Logo width={isSmallPhone ? 100 : 120} />
-          <Text style={[styles.doorName, { color: colors.textPrimary, fontSize: scaleFont(isSmallPhone ? 20 : 24) }]}>
+          <Logo width={isCompactMode ? 80 : isSmallPhone ? 95 : 115} />
+          <Text style={[styles.doorName, { color: colors.textPrimary, fontSize: scaleFont(isCompactMode ? 18 : isSmallPhone ? 20 : 24) }]}>
             {door.name}
           </Text>
-          <Text style={[styles.doorAddress, { color: colors.textTertiary, fontSize: scaleFont(13) }]}>
+          <Text style={[styles.doorAddress, { color: colors.textTertiary, fontSize: scaleFont(isCompactMode ? 11 : 13) }]}>
             {door.terminal_ip}:{door.terminal_port}
           </Text>
           <View style={styles.statusWrapper}>
