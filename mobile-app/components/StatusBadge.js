@@ -2,13 +2,28 @@ import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { borderRadius, spacing } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
+import useResponsive from '../hooks/useResponsive';
 
+/**
+ * Premium status badge with pulse animation and responsive sizing
+ */
 export default function StatusBadge({ status, size = 'medium' }) {
   const { colors, isDark } = useTheme();
+  const { scaleFont, isSmallPhone } = useResponsive();
+  
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Entrance animation
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+
+    // Pulse animation
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -52,6 +67,7 @@ export default function StatusBadge({ status, size = 'medium' }) {
     const s = status?.toLowerCase();
     if (s === 'open' || s === 'unlocked') return colors.success;
     if (s === 'error' || s === 'offline') return colors.danger;
+    if (s === 'timeout') return colors.warning;
     return colors.primary;
   };
 
@@ -60,44 +76,72 @@ export default function StatusBadge({ status, size = 'medium' }) {
     if (s === 'open' || s === 'unlocked') return 'Unlocked';
     if (s === 'error') return 'Error';
     if (s === 'offline') return 'Offline';
+    if (s === 'timeout') return 'Timeout';
     return 'Secured';
   };
 
   const statusColor = getStatusColor();
   const isSmall = size === 'small';
 
+  // Responsive sizing
+  const containerPadding = isSmall
+    ? { horizontal: isSmallPhone ? 8 : 10, vertical: isSmallPhone ? 4 : 5 }
+    : { horizontal: isSmallPhone ? 12 : 16, vertical: isSmallPhone ? 6 : 8 };
+
+  const dotSize = isSmall ? (isSmallPhone ? 5 : 6) : (isSmallPhone ? 6 : 7);
+  const fontSize = isSmall ? scaleFont(11) : scaleFont(13);
+
   return (
-    <View style={[
-      styles.container,
-      isSmall && styles.containerSmall,
-      {
-        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
-        borderColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
-      },
-    ]}>
-      <View style={styles.dotWrapper}>
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
+          paddingHorizontal: containerPadding.horizontal,
+          paddingVertical: containerPadding.vertical,
+          opacity: fadeAnim,
+        },
+      ]}
+    >
+      <View style={[styles.dotWrapper, { width: dotSize + 4, height: dotSize + 4 }]}>
         <Animated.View
           style={[
             styles.pulse,
             {
               backgroundColor: statusColor,
+              width: dotSize + 4,
+              height: dotSize + 4,
+              borderRadius: (dotSize + 4) / 2,
               transform: [{ scale: pulseAnim }],
               opacity: glowAnim,
             },
           ]}
         />
-        <View style={[styles.dot, { backgroundColor: statusColor }]} />
+        <View
+          style={[
+            styles.dot,
+            {
+              backgroundColor: statusColor,
+              width: dotSize,
+              height: dotSize,
+              borderRadius: dotSize / 2,
+            },
+          ]}
+        />
       </View>
       <Text
         style={[
           styles.text,
-          isSmall && styles.textSmall,
-          { color: statusColor },
+          {
+            color: statusColor,
+            fontSize,
+          },
         ]}
       >
         {getStatusText()}
       </Text>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -105,41 +149,22 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
     alignSelf: 'center',
     borderWidth: 1,
   },
-  containerSmall: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
   dotWrapper: {
-    width: 10,
-    height: 10,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.sm,
   },
   pulse: {
     position: 'absolute',
-    width: 10,
-    height: 10,
-    borderRadius: 5,
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
+  dot: {},
   text: {
-    fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
-  },
-  textSmall: {
-    fontSize: 11,
   },
 });
