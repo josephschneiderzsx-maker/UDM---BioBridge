@@ -252,6 +252,19 @@ export default function AccountScreen({ navigation }) {
               </TouchableOpacity>
             )}
 
+            {/* Widget Settings */}
+            <TouchableOpacity
+              style={[styles.menuButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
+              onPress={() => navigation.navigate('WidgetSettings')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.menuIconWrapper, { backgroundColor: colors.primaryDim }]}>
+                <Smartphone size={isSmallPhone ? 16 : 18} color={colors.primary} strokeWidth={2} />
+              </View>
+              <Text style={[styles.menuText, { color: colors.textPrimary, fontSize: scaleFont(16) }]}>Quick Unlock Widget</Text>
+              <ChevronLeft size={16} color={colors.textTertiary} strokeWidth={2} style={{ transform: [{ rotate: '180deg' }] }} />
+            </TouchableOpacity>
+
             {/* Sign Out */}
             <TouchableOpacity
               style={[styles.menuButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
