@@ -247,6 +247,8 @@ export default function DoorListScreen({ navigation }) {
             {
               transform: [{ translateY: headerSlideAnim }],
               borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+              left: FLOATING_MARGIN,
+              right: FLOATING_MARGIN,
             },
           ]}
           pointerEvents="box-none"
@@ -259,13 +261,13 @@ export default function DoorListScreen({ navigation }) {
           <View style={[styles.header, { paddingTop: HEADER_TOP_PADDING }]}>
             <View style={styles.headerTop}>
               <View>
-                <Logo width={isSmallPhone ? 110 : isTablet ? 150 : 130} />
+                <Logo width={isCompactMode ? 90 : isSmallPhone ? 100 : isTablet ? 150 : 120} />
                 <Text
                   style={[
                     styles.greeting,
                     {
                       color: colors.textPrimary,
-                      fontSize: scaleFont(isSmallPhone ? 26 : 32),
+                      fontSize: scaleFont(isCompactMode ? 22 : isSmallPhone ? 26 : 30),
                     },
                   ]}
                 >
@@ -273,7 +275,7 @@ export default function DoorListScreen({ navigation }) {
                 </Text>
               </View>
               <View style={styles.headerActions}>
-                <AnimatedThemeSwitch size={isSmallPhone ? 'small' : 'medium'} />
+                <AnimatedThemeSwitch size={isCompactMode ? 'small' : isSmallPhone ? 'small' : 'medium'} />
               </View>
             </View>
             
