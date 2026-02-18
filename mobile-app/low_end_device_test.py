@@ -246,12 +246,16 @@ class LowEndDeviceTestSuite:
                 self.log_failure(f"WidgetSettingsScreen {func}", "Key function not found")
         
         # Test UI components
-        ui_components = ['Switch', 'TouchableOpacity.*handleSelectDoor', 'TestUnlock']
-        for comp in ui_components:
-            if re.search(comp, widget_screen):
-                self.log_success(f"WidgetSettingsScreen UI {comp}", "UI component present")
+        ui_components = [
+            ('Switch', 'Switch component'),
+            (r'onPress=\{\(\)\s*=>\s*handleSelectDoor\(door\)', 'Door selection TouchableOpacity'),
+            ('TestUnlock', 'Test unlock button')
+        ]
+        for pattern, name in ui_components:
+            if re.search(pattern, widget_screen):
+                self.log_success(f"WidgetSettingsScreen UI {name}", "UI component present")
             else:
-                self.log_failure(f"WidgetSettingsScreen UI {comp}", "UI component missing")
+                self.log_failure(f"WidgetSettingsScreen UI {name}", "UI component missing")
 
     def test_account_screen_widget_menu(self):
         """Test AccountScreen.js has Widget Settings menu"""
