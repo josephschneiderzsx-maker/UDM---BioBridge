@@ -35,11 +35,14 @@ export default function DoorListScreen({ navigation }) {
     scaleFont,
     spacing: rSpacing,
     isSmallPhone,
+    isVerySmallPhone,
     isTablet,
     contentMaxWidth,
     headerHeight,
     tabBarPadding,
     isLowEndDevice,
+    isCompactMode,
+    floatingMargin,
   } = useResponsive();
 
   const [doors, setDoors] = useState([]);
@@ -54,9 +57,10 @@ export default function DoorListScreen({ navigation }) {
   const listFadeAnim = useRef(new Animated.Value(0)).current;
 
   // Responsive header height
-  const HEADER_TOP_PADDING = Math.max(rSpacing(24), SCREEN_HEIGHT * 0.02) + (Platform.OS === 'android' ? 10 : 0);
-  const FLOATING_HEADER_HEIGHT = isLowEndDevice ? 130 : isSmallPhone ? 140 : isTablet ? 180 : 160;
+  const HEADER_TOP_PADDING = Math.max(rSpacing(20), SCREEN_HEIGHT * 0.018) + (Platform.OS === 'android' ? 8 : 0);
+  const FLOATING_HEADER_HEIGHT = isCompactMode ? 115 : isLowEndDevice ? 125 : isSmallPhone ? 135 : isTablet ? 175 : 155;
   const TAB_BAR_PADDING_BOTTOM = tabBarPadding();
+  const FLOATING_MARGIN = floatingMargin();
 
   useEffect(() => {
     loadDoors();
