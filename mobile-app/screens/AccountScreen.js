@@ -12,19 +12,23 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, User, Lock, LogOut, Users, Mail, Save } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import api from '../services/api';
 import Input from '../components/Input';
 import PrimaryButton from '../components/PrimaryButton';
+import AnimatedThemeSwitch from '../components/AnimatedThemeSwitch';
 import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRootNavigation } from '../contexts/RootNavigationContext';
+import useResponsive from '../hooks/useResponsive';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const HEADER_TOP_PADDING = Math.max(spacing.xl, SCREEN_HEIGHT * 0.02) + (Platform.OS === 'android' ? 10 : 0);
 
 export default function AccountScreen({ navigation }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { resetToLogin } = useRootNavigation();
+  const { scaleFont, spacing: rSpacing, isSmallPhone, isTablet, contentMaxWidth } = useResponsive();
+
   const [profile, setProfile] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -36,14 +40,25 @@ export default function AccountScreen({ navigation }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+
+  const HEADER_TOP_PADDING = Math.max(rSpacing(24), SCREEN_HEIGHT * 0.02) + (Platform.OS === 'android' ? 10 : 0);
 
   useEffect(() => {
     loadProfile();
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 350,
-      useNativeDriver: true,
-    }).start();
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 50,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
   const loadProfile = async () => {
@@ -66,6 +81,7 @@ export default function AccountScreen({ navigation }) {
     setSavingProfile(true);
     try {
       await api.updateProfile(firstName.trim(), lastName.trim());
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', 'Profile updated');
     } catch (error) {
       Alert.alert('Error', error.message);
@@ -93,6 +109,7 @@ export default function AccountScreen({ navigation }) {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', 'Password changed successfully');
     } catch (error) {
       Alert.alert('Error', error.message);
@@ -108,6 +125,7 @@ export default function AccountScreen({ navigation }) {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           await api.clearAuth();
           resetToLogin();
         },
@@ -115,144 +133,153 @@ export default function AccountScreen({ navigation }) {
     ]);
   };
 
+  const sectionPadding = isSmallPhone ? 14 : isTablet ? 24 : 20;
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.View style={[styles.inner, { opacity: fadeAnim }]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: HEADER_TOP_PADDING }]}>
           <TouchableOpacity
             style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
             onPress={() => navigation.goBack()}
           >
-            <ChevronLeft size={20} color={colors.textSecondary} strokeWidth={2.5} />
+            <ChevronLeft size={isSmallPhone ? 18 : 20} color={colors.textSecondary} strokeWidth={2.5} />
           </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Account</Text>
-          <View style={{ width: 36 }} />
+          <Text style={[styles.title, { color: colors.textPrimary, fontSize: scaleFont(18) }]}>Account</Text>
+          <AnimatedThemeSwitch size={isSmallPhone ? 'small' : 'medium'} />
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Profile Section */}
-          <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
-            <View style={styles.sectionHeader}>
-              <User size={16} color={colors.primary} strokeWidth={2} />
-              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Profile</Text>
+        <Animated.View style={{ flex: 1, transform: [{ translateY: slideAnim }] }}>
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContent,
+              {
+                paddingHorizontal: rSpacing(24),
+                maxWidth: contentMaxWidth(),
+                alignSelf: isTablet ? 'center' : 'stretch',
+                width: isTablet ? contentMaxWidth() : '100%',
+              },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Profile Section */}
+            <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.separator, padding: sectionPadding }]}>
+              <View style={styles.sectionHeader}>
+                <User size={isSmallPhone ? 14 : 16} color={colors.primary} strokeWidth={2} />
+                <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: scaleFont(15) }]}>Profile</Text>
+              </View>
+
+              {profile && (
+                <View style={[styles.emailRow, { backgroundColor: colors.fillTertiary }]}>
+                  <Mail size={14} color={colors.textTertiary} strokeWidth={2} />
+                  <Text style={[styles.emailText, { color: colors.textSecondary, fontSize: scaleFont(14) }]}>{profile.email}</Text>
+                </View>
+              )}
+
+              <Input
+                label="First Name"
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="First name"
+              />
+              <Input
+                label="Last Name"
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Last name"
+              />
+              <PrimaryButton
+                title="Save Profile"
+                onPress={handleSaveProfile}
+                loading={savingProfile}
+                variant="secondary"
+                size="small"
+                icon={<Save size={isSmallPhone ? 14 : 16} color={colors.primary} strokeWidth={2} />}
+              />
             </View>
 
-            {profile && (
-              <View style={[styles.emailRow, { backgroundColor: colors.fillTertiary }]}>
-                <Mail size={14} color={colors.textTertiary} strokeWidth={2} />
-                <Text style={[styles.emailText, { color: colors.textSecondary }]}>{profile.email}</Text>
+            {/* Password Section */}
+            <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.separator, padding: sectionPadding }]}>
+              <View style={styles.sectionHeader}>
+                <Lock size={isSmallPhone ? 14 : 16} color={colors.primary} strokeWidth={2} />
+                <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: scaleFont(15) }]}>Change Password</Text>
               </View>
+              <Input
+                label="Current Password"
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                placeholder="Enter current password"
+                secureTextEntry
+              />
+              <Input
+                label="New Password"
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="Enter new password"
+                secureTextEntry
+              />
+              <Input
+                label="Confirm Password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Confirm new password"
+                secureTextEntry
+              />
+              <PrimaryButton
+                title="Change Password"
+                onPress={handleChangePassword}
+                loading={changingPassword}
+                variant="secondary"
+                size="small"
+                icon={<Lock size={isSmallPhone ? 14 : 16} color={colors.primary} strokeWidth={2} />}
+              />
+            </View>
+
+            {/* Admin: Manage Users */}
+            {isAdmin && (
+              <TouchableOpacity
+                style={[styles.menuButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
+                onPress={() => navigation.navigate('UsersList')}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.menuIconWrapper, { backgroundColor: colors.primaryDim }]}>
+                  <Users size={isSmallPhone ? 16 : 18} color={colors.primary} strokeWidth={2} />
+                </View>
+                <Text style={[styles.menuText, { color: colors.textPrimary, fontSize: scaleFont(16) }]}>Manage Users</Text>
+                <ChevronLeft size={16} color={colors.textTertiary} strokeWidth={2} style={{ transform: [{ rotate: '180deg' }] }} />
+              </TouchableOpacity>
             )}
 
-            <Input
-              label="First Name"
-              value={firstName}
-              onChangeText={setFirstName}
-              placeholder="First name"
-            />
-            <Input
-              label="Last Name"
-              value={lastName}
-              onChangeText={setLastName}
-              placeholder="Last name"
-            />
-            <PrimaryButton
-              title="Save Profile"
-              onPress={handleSaveProfile}
-              loading={savingProfile}
-              variant="secondary"
-              size="small"
-              icon={<Save size={16} color={colors.primary} strokeWidth={2} />}
-            />
-          </View>
-
-          {/* Password Section */}
-          <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
-            <View style={styles.sectionHeader}>
-              <Lock size={16} color={colors.primary} strokeWidth={2} />
-              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Change Password</Text>
-            </View>
-            <Input
-              label="Current Password"
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              placeholder="Enter current password"
-              secureTextEntry
-            />
-            <Input
-              label="New Password"
-              value={newPassword}
-              onChangeText={setNewPassword}
-              placeholder="Enter new password"
-              secureTextEntry
-            />
-            <Input
-              label="Confirm Password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder="Confirm new password"
-              secureTextEntry
-            />
-            <PrimaryButton
-              title="Change Password"
-              onPress={handleChangePassword}
-              loading={changingPassword}
-              variant="secondary"
-              size="small"
-              icon={<Lock size={16} color={colors.primary} strokeWidth={2} />}
-            />
-          </View>
-
-          {/* Admin: Manage Users */}
-          {isAdmin && (
+            {/* Sign Out */}
             <TouchableOpacity
               style={[styles.menuButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-              onPress={() => navigation.navigate('UsersList')}
+              onPress={handleLogout}
+              activeOpacity={0.7}
             >
-              <View style={styles.menuIconWrapper}>
-                <Users size={18} color={colors.primary} strokeWidth={2} />
+              <View style={[styles.menuIconWrapper, { backgroundColor: colors.dangerDim }]}>
+                <LogOut size={isSmallPhone ? 16 : 18} color={colors.danger} strokeWidth={2} />
               </View>
-              <Text style={[styles.menuText, { color: colors.textPrimary }]}>Manage Users</Text>
-              <ChevronLeft size={16} color={colors.textTertiary} strokeWidth={2} style={{ transform: [{ rotate: '180deg' }] }} />
+              <Text style={[styles.menuText, { color: colors.danger, fontSize: scaleFont(16) }]}>Sign Out</Text>
             </TouchableOpacity>
-          )}
 
-          {/* Sign Out */}
-          <TouchableOpacity
-            style={[styles.menuButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-            onPress={handleLogout}
-          >
-            <View style={styles.menuIconWrapper}>
-              <LogOut size={18} color={colors.danger} strokeWidth={2} />
-            </View>
-            <Text style={[styles.menuText, { color: colors.danger }]}>Sign Out</Text>
-          </TouchableOpacity>
-
-          <View style={{ height: spacing.xxxl }} />
-        </ScrollView>
+            <View style={{ height: spacing.xxxl }} />
+          </ScrollView>
+        </Animated.View>
       </Animated.View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  inner: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  inner: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.xl,
-    paddingTop: HEADER_TOP_PADDING,
     paddingBottom: spacing.md,
   },
   backButton: {
@@ -263,18 +290,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    letterSpacing: -0.3,
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-  },
+  title: { fontWeight: '600', letterSpacing: -0.3 },
+  scrollContent: { paddingTop: spacing.sm },
   section: {
     borderRadius: borderRadius.lg,
-    padding: spacing.lg,
     marginBottom: spacing.md,
     borderWidth: 1,
   },
@@ -284,11 +303,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: spacing.md,
   },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-  },
+  sectionTitle: { fontWeight: '600', letterSpacing: -0.2 },
   emailRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -298,9 +313,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     marginBottom: spacing.md,
   },
-  emailText: {
-    fontSize: 14,
-  },
+  emailText: {},
   menuButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -317,10 +330,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  menuText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
-    letterSpacing: -0.2,
-  },
+  menuText: { flex: 1, fontWeight: '500', letterSpacing: -0.2 },
 });
