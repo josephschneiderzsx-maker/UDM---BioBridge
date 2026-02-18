@@ -51,10 +51,13 @@ export default function DoorControlScreen({ route, navigation }) {
     spacing: rSpacing,
     iconSize,
     isSmallPhone,
+    isVerySmallPhone,
     isTablet,
     buttonHeight,
     tabBarPadding,
     isLowEndDevice,
+    isCompactMode,
+    floatingMargin,
   } = useResponsive();
 
   const { door } = route.params;
