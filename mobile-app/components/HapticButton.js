@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -212,11 +212,11 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   buttonSmall: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     borderRadius: borderRadius.sm,
   },
   buttonLarge: {
-    paddingHorizontal: 32,
+    paddingHorizontal: 28,
     borderRadius: borderRadius.lg,
   },
   disabled: {
@@ -231,10 +231,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconLeft: {
-    marginRight: 8,
+    marginRight: 6,
   },
   iconRight: {
-    marginLeft: 8,
+    marginLeft: 6,
   },
   text: {
     fontWeight: '600',

@@ -1,147 +1,98 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Alert,
-  TouchableOpacity,
-  ScrollView,
-  Switch,
-  Animated,
-  Dimensions,
-  Platform,
-  ActivityIndicator,
+  View, Text, StyleSheet, Alert, ScrollView,
+  TouchableOpacity, Switch, ActivityIndicator,
 } from 'react-native';
-import GlassBackground from '../components/GlassBackground';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, Check } from 'lucide-react-native';
 import api from '../services/api';
-import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const HEADER_TOP_PADDING = Math.max(spacing.xl, SCREEN_HEIGHT * 0.02) + (Platform.OS === 'android' ? 10 : 0);
-const FLOATING_HEADER_HEIGHT = 110;
-const TAB_BAR_PADDING_BOTTOM = 100;
-
-const EVENT_TYPES = [
-  { group: 'Entry Events', items: [
+const EVENT_GROUPS = [
+  { title: 'Entry', items: [
     { code: '10', label: 'Door Open' },
-    { code: '8', label: 'Remote Open Door' },
-    { code: '101', label: 'Identify Success' },
+    { code: '8', label: 'Remote Open' },
+    { code: '101', label: 'Access Granted' },
   ]},
-  { group: 'Exit Events', items: [
+  { title: 'Exit', items: [
     { code: '53', label: 'Exit Button' },
     { code: '5', label: 'Door Close' },
-    { code: '9', label: 'Remote Close Door' },
+    { code: '9', label: 'Remote Close' },
   ]},
-  { group: 'Alarm Events', items: [
-    { code: '1', label: 'Door Accidental Open' },
+  { title: 'Alarms', items: [
+    { code: '1', label: 'Accidental Open' },
     { code: '4', label: 'Door Left Open' },
-    { code: '7', label: 'Remote Release Alarm' },
-    { code: '55', label: 'Disassemble the Alarm' },
-    { code: '58', label: 'Wrong Press Alarm' },
+    { code: '7', label: 'Remote Alarm' },
+    { code: '55', label: 'Alarm Disassembled' },
+    { code: '58', label: 'Wrong Press' },
   ]},
-  { group: 'Access Events', items: [
+  { title: 'Access Denied', items: [
     { code: '11', label: 'Door Not Open' },
     { code: '22', label: 'Timezone Denied' },
     { code: '23', label: 'Access Denied' },
     { code: '100', label: 'Invalid ID' },
     { code: '300', label: 'Lost/Stolen Card' },
   ]},
-  { group: 'Status Events', items: [
+  { title: 'Status', items: [
     { code: '301', label: 'Connected' },
     { code: '302', label: 'Disconnected' },
   ]},
 ];
 
-const ALL_CODES = EVENT_TYPES.flatMap(g => g.items.map(i => i.code));
+const ALL_CODES = EVENT_GROUPS.flatMap(g => g.items.map(i => i.code));
 
 export default function NotificationSettingsScreen({ route, navigation }) {
   const { colors } = useTheme();
   const { door } = route.params;
-  const [enabledCodes, setEnabledCodes] = useState(new Set());
+  const [enabledCodes, setEnabledCodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    loadPreferences();
-    Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
-  }, []);
+  useEffect(() => { loadPrefs(); }, []);
 
-  const loadPreferences = async () => {
+  const loadPrefs = async () => {
     try {
-      setLoading(true);
       const prefs = await api.getNotificationPreferences();
       const pref = prefs.find(p => p.door_id === door.id);
-      if (pref && pref.notify_event_types) {
-        const codes = pref.notify_event_types.split(',').map(c => c.trim()).filter(c => c);
-        setEnabledCodes(new Set(codes));
-      } else if (pref) {
-        // Legacy: if old booleans are set but no event_types, enable matching groups
-        const codes = new Set();
-        if (pref.notify_on_open) {
-          ['10', '8', '101'].forEach(c => codes.add(c));
-        }
-        if (pref.notify_on_close) {
-          ['53', '5', '9'].forEach(c => codes.add(c));
-        }
-        if (pref.notify_on_forced) {
-          ['1', '4', '7', '55', '58'].forEach(c => codes.add(c));
-        }
+      if (pref?.notify_event_types) {
+        setEnabledCodes(pref.notify_event_types);
+      } else if (pref?.notify_on_open || pref?.notify_on_close || pref?.notify_on_forced) {
+        const codes = [];
+        if (pref.notify_on_open) codes.push('10', '8', '101');
+        if (pref.notify_on_close) codes.push('5', '9', '53');
+        if (pref.notify_on_forced) codes.push('1', '4', '7');
         setEnabledCodes(codes);
       }
-    } catch (error) {
-      Alert.alert('Error', error.message);
+    } catch {
+      setEnabledCodes([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleCode = (code) => {
-    setEnabledCodes(prev => {
-      const next = new Set(prev);
-      if (next.has(code)) {
-        next.delete(code);
-      } else {
-        next.add(code);
-      }
-      return next;
-    });
-  };
-
-  const toggleGroup = (items) => {
-    const codes = items.map(i => i.code);
-    const allEnabled = codes.every(c => enabledCodes.has(c));
-    setEnabledCodes(prev => {
-      const next = new Set(prev);
-      codes.forEach(c => {
-        if (allEnabled) {
-          next.delete(c);
-        } else {
-          next.add(c);
-        }
-      });
-      return next;
-    });
+  const toggle = (code) => {
+    setEnabledCodes(prev =>
+      prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
+    );
   };
 
   const toggleAll = () => {
-    if (enabledCodes.size === ALL_CODES.length) {
-      setEnabledCodes(new Set());
-    } else {
-      setEnabledCodes(new Set(ALL_CODES));
-    }
+    setEnabledCodes(prev => prev.length === ALL_CODES.length ? [] : [...ALL_CODES]);
   };
 
-  const save = async () => {
+  const handleSave = async () => {
     setSaving(true);
     try {
-      const codesStr = Array.from(enabledCodes).join(',');
-      const hasAny = enabledCodes.size > 0;
-      await api.setNotificationPreference(door.id, hasAny, hasAny, hasAny, codesStr);
-      navigation.goBack();
+      await api.setNotificationPreference(
+        door.id,
+        enabledCodes.some(c => ['10', '8', '101'].includes(c)),
+        enabledCodes.some(c => ['5', '9', '53'].includes(c)),
+        enabledCodes.some(c => ['1', '4', '7'].includes(c)),
+        enabledCodes,
+      );
+      Alert.alert('Saved', 'Notification settings updated.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {
@@ -149,161 +100,120 @@ export default function NotificationSettingsScreen({ route, navigation }) {
     }
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <Animated.View style={[styles.inner, { opacity: fadeAnim }]}>
-        <View style={styles.headerFloating}>
-          <GlassBackground intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-              onPress={() => navigation.goBack()}
-            >
-              <ChevronLeft size={20} color={colors.textSecondary} strokeWidth={2.5} />
-            </TouchableOpacity>
-            <View style={styles.headerCenter}>
-              <Text style={[styles.title, { color: colors.textPrimary }]}>Notifications</Text>
-              <Text style={[styles.subtitle, { color: colors.textTertiary }]}>{door.name}</Text>
-            </View>
-            <View style={{ width: 36 }} />
-          </View>
-        </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.separator }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <ChevronLeft size={24} color={colors.textPrimary} strokeWidth={2} />
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
+          {door.name}
+        </Text>
+        <TouchableOpacity onPress={handleSave} disabled={saving} style={styles.saveBtn}>
+          {saving
+            ? <ActivityIndicator size="small" color={colors.primary} />
+            : <Text style={[styles.saveText, { color: colors.primary }]}>Save</Text>
+          }
+        </TouchableOpacity>
+      </View>
 
-        <ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingTop: FLOATING_HEADER_HEIGHT, paddingBottom: TAB_BAR_PADDING_BOTTOM }]}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Toggle All */}
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Select all */}
           <TouchableOpacity
-            style={[styles.toggleAllRow, { backgroundColor: colors.surface, borderColor: colors.separator }]}
+            style={[styles.selectAll, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={toggleAll}
-            activeOpacity={0.7}
           >
-            <Text style={[styles.toggleAllText, { color: colors.textPrimary }]}>All Events</Text>
-            <Switch
-              value={enabledCodes.size === ALL_CODES.length}
-              onValueChange={toggleAll}
-              trackColor={{ false: colors.fillTertiary, true: colors.primary }}
-              thumbColor="#FFFFFF"
-            />
+            <Text style={[styles.selectAllText, { color: colors.textPrimary }]}>
+              {enabledCodes.length === ALL_CODES.length ? 'Deselect All' : 'Select All'}
+            </Text>
+            <Text style={[styles.selectAllCount, { color: colors.textSecondary }]}>
+              {enabledCodes.length}/{ALL_CODES.length} enabled
+            </Text>
           </TouchableOpacity>
 
-          {EVENT_TYPES.map((group) => {
-            const allGroupEnabled = group.items.every(i => enabledCodes.has(i.code));
-            return (
-              <View key={group.group} style={styles.groupContainer}>
-                <TouchableOpacity
-                  style={styles.groupHeader}
-                  onPress={() => toggleGroup(group.items)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.groupTitle, { color: colors.textSecondary }]}>{group.group}</Text>
-                  <Text style={[styles.groupToggle, { color: colors.primary }]}>
-                    {allGroupEnabled ? 'Disable all' : 'Enable all'}
-                  </Text>
-                </TouchableOpacity>
-                <View style={[styles.groupCard, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
-                  {group.items.map((item, index) => (
-                    <View key={item.code}>
-                      {index > 0 && <View style={[styles.divider, { backgroundColor: colors.separator }]} />}
-                      <View style={styles.eventRow}>
-                        <Text style={[styles.eventLabel, { color: colors.textPrimary }]}>{item.label}</Text>
-                        <Switch
-                          value={enabledCodes.has(item.code)}
-                          onValueChange={() => toggleCode(item.code)}
-                          trackColor={{ false: colors.fillTertiary, true: colors.primary }}
-                          thumbColor="#FFFFFF"
-                        />
-                      </View>
+          {EVENT_GROUPS.map(group => (
+            <View key={group.title} style={styles.group}>
+              <Text style={[styles.groupTitle, { color: colors.textSecondary }]}>{group.title.toUpperCase()}</Text>
+              <View style={[styles.groupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                {group.items.map((item, idx) => (
+                  <TouchableOpacity
+                    key={item.code}
+                    style={[
+                      styles.row,
+                      idx < group.items.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.separator },
+                    ]}
+                    onPress={() => toggle(item.code)}
+                  >
+                    <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>{item.label}</Text>
+                    <View style={[
+                      styles.checkbox,
+                      {
+                        backgroundColor: enabledCodes.includes(item.code) ? colors.primary : 'transparent',
+                        borderColor: enabledCodes.includes(item.code) ? colors.primary : colors.border,
+                      },
+                    ]}>
+                      {enabledCodes.includes(item.code) && (
+                        <Check size={12} color="#000" strokeWidth={3} />
+                      )}
                     </View>
-                  ))}
-                </View>
+                  </TouchableOpacity>
+                ))}
               </View>
-            );
-          })}
+            </View>
+          ))}
         </ScrollView>
-
-        {/* Save Button */}
-        <View style={styles.saveContainer}>
-          <TouchableOpacity
-            style={[styles.saveButton, { backgroundColor: colors.primary }]}
-            onPress={save}
-            disabled={saving}
-            activeOpacity={0.8}
-          >
-            {saving ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.saveText}>Save</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { flex: 1 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  headerFloating: {
-    position: 'absolute', top: 0, left: 20, right: 20, zIndex: 10,
-    borderRadius: 30, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)',
-    overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25, shadowRadius: 12, elevation: 8,
-  },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl, paddingTop: HEADER_TOP_PADDING, paddingBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  backButton: {
-    width: 36, height: 36, borderRadius: 10,
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1,
+  backBtn: { padding: 4 },
+  title: { flex: 1, fontSize: 17, fontWeight: '600', textAlign: 'center' },
+  saveBtn: { padding: 4, minWidth: 40, alignItems: 'flex-end' },
+  saveText: { fontSize: 16, fontWeight: '600' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  content: { padding: 16 },
+  selectAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 20,
   },
-  headerCenter: { alignItems: 'center' },
-  title: { fontSize: 18, fontWeight: '600', letterSpacing: -0.3 },
-  subtitle: { fontSize: 12, marginTop: 2 },
-  scrollContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: 100 },
-  toggleAllRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderRadius: borderRadius.lg, padding: spacing.md,
-    marginBottom: spacing.lg, borderWidth: 1,
+  selectAllText: { fontSize: 15, fontWeight: '600' },
+  selectAllCount: { fontSize: 13 },
+  group: { marginBottom: 16 },
+  groupTitle: { fontSize: 12, fontWeight: '600', marginBottom: 6, marginLeft: 2, letterSpacing: 0.5 },
+  groupCard: { borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
   },
-  toggleAllText: { fontSize: 15, fontWeight: '600' },
-  groupContainer: { marginBottom: spacing.lg },
-  groupHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: 6, paddingHorizontal: 4,
+  rowLabel: { fontSize: 15 },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  groupTitle: { fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  groupToggle: { fontSize: 12, fontWeight: '500' },
-  groupCard: {
-    borderRadius: borderRadius.lg, borderWidth: 1, overflow: 'hidden',
-  },
-  eventRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.md, paddingVertical: 10,
-  },
-  eventLabel: { fontSize: 14, fontWeight: '500' },
-  divider: { height: 1, marginLeft: spacing.md },
-  saveContainer: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl, paddingTop: spacing.md,
-  },
-  saveButton: {
-    height: 50, borderRadius: borderRadius.lg,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  saveText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
 });

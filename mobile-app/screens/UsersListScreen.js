@@ -1,293 +1,154 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  Alert,
-  TouchableOpacity,
-  Animated,
-  Dimensions,
-  Platform,
-  RefreshControl,
+  View, Text, FlatList, StyleSheet, Alert,
+  TouchableOpacity, ActivityIndicator,
 } from 'react-native';
-import GlassBackground from '../components/GlassBackground';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Plus, Shield, UserCog } from 'lucide-react-native';
+import { ChevronLeft, Plus, User, ChevronRight, Trash2 } from 'lucide-react-native';
 import api from '../services/api';
-import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const HEADER_TOP_PADDING = Math.max(spacing.xl, SCREEN_HEIGHT * 0.02) + (Platform.OS === 'android' ? 10 : 0);
-const FLOATING_HEADER_HEIGHT = 140;
-const TAB_BAR_PADDING_BOTTOM = 100;
 
 export default function UsersListScreen({ navigation }) {
   const { colors } = useTheme();
   const [users, setUsers] = useState([]);
-  const [userQuota, setUserQuota] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => { loadUsers(); }, []);
 
   useEffect(() => {
-    loadUsers();
-    loadUserQuota();
-    Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      loadUsers();
-      loadUserQuota();
-    });
-    return unsubscribe;
+    const unsub = navigation.addListener('focus', loadUsers);
+    return unsub;
   }, [navigation]);
 
   const loadUsers = async () => {
     try {
-      setLoading(true);
-      const data = await api.getUsers();
-      setUsers(data);
+      const list = await api.getUsers();
+      setUsers(list);
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  const loadUserQuota = async () => {
-    try {
-      const quotaData = await api.getUsersQuota();
-      setUserQuota(quotaData);
-    } catch {
-      setUserQuota(null);
-    }
-  };
-
-  const handleUserLongPress = (user) => {
-    Alert.alert(
-      `${user.first_name} ${user.last_name}`,
-      user.email,
-      [
-        {
-          text: 'Edit',
-          onPress: () => {
-            Alert.prompt
-              ? promptEditUser(user)
-              : editUserDialog(user);
-          },
+  const handleDelete = (user) => {
+    Alert.alert('Delete user', `Remove ${user.email}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.deleteUser(user.id);
+            setUsers(prev => prev.filter(u => u.id !== user.id));
+          } catch (e) {
+            Alert.alert('Error', e.message);
+          }
         },
-        {
-          text: 'Permissions',
-          onPress: () => navigation.navigate('UserPermissions', { user }),
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => confirmDeleteUser(user),
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+      },
+    ]);
   };
-
-  const editUserDialog = (user) => {
-    // Navigate to a simple edit - reuse CreateUser screen in edit mode
-    navigation.navigate('CreateUser', { editUser: user });
-  };
-
-  const promptEditUser = (user) => {
-    navigation.navigate('CreateUser', { editUser: user });
-  };
-
-  const confirmDeleteUser = (user) => {
-    Alert.alert(
-      'Delete User',
-      `Are you sure you want to delete "${user.first_name} ${user.last_name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.deleteUser(user.id);
-              loadUsers();
-            } catch (error) {
-              Alert.alert('Error', error.message);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const renderUser = ({ item, index }) => (
-    <TouchableOpacity
-      style={[styles.userCard, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-      onPress={() => navigation.navigate('UserPermissions', { user: item })}
-      onLongPress={() => handleUserLongPress(item)}
-      activeOpacity={0.8}
-    >
-      <View style={[styles.avatar, { backgroundColor: item.is_admin ? colors.primaryDim : colors.fillTertiary }]}>
-        <Text style={[styles.avatarText, { color: item.is_admin ? colors.primary : colors.textSecondary }]}>
-          {(item.first_name || '?')[0].toUpperCase()}
-        </Text>
-      </View>
-      <View style={styles.userInfo}>
-        <Text style={[styles.userName, { color: colors.textPrimary }]} numberOfLines={1}>
-          {item.first_name} {item.last_name}
-        </Text>
-        <Text style={[styles.userEmail, { color: colors.textTertiary }]} numberOfLines={1}>
-          {item.email}
-        </Text>
-      </View>
-      {item.is_admin && (
-        <View style={[styles.adminBadge, { backgroundColor: colors.primaryDim }]}>
-          <Text style={[styles.adminText, { color: colors.primary }]}>Admin</Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <Animated.View style={[styles.inner, { opacity: fadeAnim }]}>
-        <View style={styles.headerFloating}>
-          <GlassBackground intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-              onPress={() => navigation.goBack()}
-            >
-              <ChevronLeft size={20} color={colors.textSecondary} strokeWidth={2.5} />
-            </TouchableOpacity>
-            <Text style={[styles.title, { color: colors.textPrimary }]}>Users</Text>
-            <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: colors.primaryDim }]}
-              onPress={() => navigation.navigate('CreateUser')}
-              disabled={userQuota && userQuota.remaining <= 0}
-            >
-              <Plus size={16} color={colors.primary} strokeWidth={2.5} />
-            </TouchableOpacity>
-          </View>
-          {userQuota && (
-            <View style={styles.statsRow}>
-              <View style={[styles.statPill, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
-                <Text style={[styles.statValue, { color: colors.textPrimary }]}>{users.length}</Text>
-                <Text style={[styles.statLabel, { color: colors.textTertiary }]}>
-                  {users.length === 1 ? 'user' : 'users'}
-                </Text>
-              </View>
-              <View style={[styles.statPill, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
-                <Text style={[styles.statValue, { color: colors.textPrimary }]}>{userQuota.used}/{userQuota.quota}</Text>
-                <Text style={[styles.statLabel, { color: colors.textTertiary }]}>quota</Text>
-              </View>
-            </View>
-          )}
-        </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.separator }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <ChevronLeft size={24} color={colors.textPrimary} strokeWidth={2} />
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Users</Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('CreateUser')}
+          style={styles.addBtn}
+        >
+          <Plus size={22} color={colors.primary} strokeWidth={2.5} />
+        </TouchableOpacity>
+      </View>
 
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : (
         <FlatList
           data={users}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderUser}
-          contentContainerStyle={[styles.listContent, { paddingTop: FLOATING_HEADER_HEIGHT, paddingBottom: TAB_BAR_PADDING_BOTTOM }]}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => { setRefreshing(true); loadUsers(); loadUserQuota(); }}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          }
-          ListEmptyComponent={
-            !loading && (
-              <View style={styles.emptyContainer}>
-                <UserCog size={28} color={colors.textTertiary} strokeWidth={1.5} />
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No users found</Text>
+          keyExtractor={item => String(item.id)}
+          contentContainerStyle={[styles.content, users.length === 0 && styles.emptyContent]}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => navigation.navigate('UserPermissions', { user: item })}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.avatar, { backgroundColor: colors.primaryDim }]}>
+                <User size={18} color={colors.primary} strokeWidth={2} />
               </View>
-            )
+              <View style={styles.info}>
+                <Text style={[styles.name, { color: colors.textPrimary }]}>
+                  {`${item.first_name || ''} ${item.last_name || ''}`.trim() || item.email}
+                </Text>
+                <Text style={[styles.email, { color: colors.textSecondary }]}>
+                  {item.email} · {item.role || 'user'}
+                </Text>
+              </View>
+              <View style={styles.rowActions}>
+                <TouchableOpacity onPress={() => handleDelete(item)} style={styles.deleteBtn}>
+                  <Trash2 size={16} color={colors.danger} strokeWidth={2} />
+                </TouchableOpacity>
+                <ChevronRight size={16} color={colors.textTertiary} strokeWidth={2} />
+              </View>
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No users yet</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                Tap + to add your first user.
+              </Text>
+            </View>
           }
         />
-      </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { flex: 1 },
-  headerFloating: {
-    position: 'absolute', top: 0, left: 20, right: 20, zIndex: 10,
-    borderRadius: 30, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)',
-    overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25, shadowRadius: 12, elevation: 8,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl,
-    paddingTop: HEADER_TOP_PADDING,
-    paddingBottom: spacing.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.md,
-  },
-  statPill: {
+  backBtn: { padding: 4 },
+  title: { flex: 1, fontSize: 17, fontWeight: '600', textAlign: 'center' },
+  addBtn: { padding: 4 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  content: { padding: 16 },
+  emptyContent: { flex: 1, justifyContent: 'center' },
+  card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 1,
-  },
-  statValue: { fontSize: 13, fontWeight: '700' },
-  statLabel: { fontSize: 13 },
-  backButton: {
-    width: 36, height: 36, borderRadius: 10,
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1,
-  },
-  title: { fontSize: 18, fontWeight: '600', letterSpacing: -0.3 },
-  quotaLabel: { fontSize: 12, marginTop: 2 },
-  addButton: {
-    width: 36, height: 36, borderRadius: 10,
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(0, 170, 255, 0.15)',
-  },
-  statsRow: { flexDirection: 'row', gap: 8 },
-  statPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1,
-  },
-  statValue: { fontSize: 13, fontWeight: '700' },
-  statLabel: { fontSize: 13 },
-  listContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.xxxl },
-  userCard: {
-    flexDirection: 'row', alignItems: 'center',
-    borderRadius: borderRadius.lg, padding: spacing.lg,
-    marginBottom: 10, borderWidth: 1,
+    marginBottom: 8,
   },
   avatar: {
-    width: 44, height: 44, borderRadius: 22,
-    justifyContent: 'center', alignItems: 'center', marginRight: 14,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  avatarText: { fontSize: 18, fontWeight: '600' },
-  userInfo: { flex: 1, marginRight: spacing.sm },
-  userName: { fontSize: 16, fontWeight: '600', letterSpacing: -0.2, marginBottom: 3 },
-  userEmail: { fontSize: 13, letterSpacing: 0.1 },
-  adminBadge: {
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
-  },
-  adminText: { fontSize: 11, fontWeight: '600' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
-  emptyText: { fontSize: 14, marginTop: spacing.md },
+  info: { flex: 1 },
+  name: { fontSize: 15, fontWeight: '600', marginBottom: 2 },
+  email: { fontSize: 13 },
+  rowActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  deleteBtn: { padding: 4 },
+  empty: { alignItems: 'center', paddingVertical: 48 },
+  emptyTitle: { fontSize: 17, fontWeight: '600', marginBottom: 8 },
+  emptyText: { fontSize: 14, textAlign: 'center' },
 });

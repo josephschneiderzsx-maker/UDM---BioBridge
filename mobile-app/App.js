@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
+import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StatusBar, View, Animated, StyleSheet, Image, Platform, Dimensions } from 'react-native';
-import GlassBackground from './components/GlassBackground';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StatusBar, View, Platform, StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { DoorOpen, Plus, User, History } from 'lucide-react-native';
-import Logo from './components/Logo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DoorOpen, Plus, History, User } from 'lucide-react-native';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { RootNavigationProvider } from './contexts/RootNavigationContext';
+
 import LoginScreen from './screens/LoginScreen';
+import ServerConfigScreen from './screens/ServerConfigScreen';
 import DoorListScreen from './screens/DoorListScreen';
 import DoorControlScreen from './screens/DoorControlScreen';
 import AddDoorScreen from './screens/AddDoorScreen';
@@ -22,130 +24,23 @@ import UserPermissionsScreen from './screens/UserPermissionsScreen';
 import ActivityLogScreen from './screens/ActivityLogScreen';
 import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
 import WidgetSettingsScreen from './screens/WidgetSettingsScreen';
-import { ThemeProvider, useTheme } from './contexts/ThemeContext';
-import useResponsive from './hooks/useResponsive';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-function SplashScreen({ onFinish }) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.88)).current;
-  const logoFadeAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    // Staggered entrance animation
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 50,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.timing(logoFadeAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    const timer = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoFadeAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start(() => onFinish());
-    }, 2200);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  return (
-    <View style={splashStyles.container}>
-      <Animated.View
-        style={[
-          splashStyles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }],
-          },
-        ]}
-      >
-        <Logo width={Math.min(SCREEN_WIDTH * 0.65, 280)} variant="white" />
-      </Animated.View>
-
-      <Animated.View style={[splashStyles.footer, { opacity: logoFadeAnim }]}>
-        <Image
-          source={require('./assets/urzis-logo.png')}
-          style={splashStyles.footerLogo}
-          resizeMode="contain"
-        />
-      </Animated.View>
-    </View>
-  );
-}
-
-const splashStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000000',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 50,
-    alignItems: 'center',
-    width: '100%',
-  },
-  footerLogo: {
-    width: 120,
-    height: 40,
-    opacity: 0.8,
-  },
-});
 
 const stackScreenOptions = (colors) => ({
   headerShown: false,
   cardStyle: { backgroundColor: colors.background },
   gestureEnabled: true,
-  ...TransitionPresets.SlideFromRightIOS,
+  gestureDirection: 'horizontal',
 });
 
-function StatusStack() {
+function DoorsStack() {
   const { colors } = useTheme();
   return (
     <Stack.Navigator screenOptions={stackScreenOptions(colors)}>
       <Stack.Screen name="DoorList" component={DoorListScreen} />
-      <Stack.Screen
-        name="DoorControl"
-        component={DoorControlScreen}
-        options={{
-          ...TransitionPresets.ModalSlideFromBottomIOS,
-          gestureEnabled: true,
-        }}
-      />
+      <Stack.Screen name="DoorControl" component={DoorControlScreen} />
       <Stack.Screen name="EditDoor" component={EditDoorScreen} />
       <Stack.Screen name="DiscoveredDevices" component={DiscoveredDevicesScreen} />
       <Stack.Screen name="ActivityLog" component={ActivityLogScreen} />
@@ -154,7 +49,7 @@ function StatusStack() {
   );
 }
 
-function AddDoorStack() {
+function AddStack() {
   const { colors } = useTheme();
   return (
     <Stack.Navigator screenOptions={stackScreenOptions(colors)}>
@@ -187,90 +82,43 @@ function AccountStack() {
 
 function MainTabs() {
   const { colors, isDark } = useTheme();
-  const { 
-    isSmallPhone, 
-    isVerySmallPhone,
-    isTablet, 
-    scaleFont, 
-    isLowEndDevice,
-    isCompactMode,
-    tabBarHeight: getTabBarHeight,
-    floatingMargin,
-    hasLargeFontScale,
-  } = useResponsive();
 
-  // Responsive tab bar dimensions - adapté à la densité et taille de police
-  const tabBarHeight = getTabBarHeight();
-  const tabBarMargin = floatingMargin();
-  const tabBarBottom = Platform.OS === 'ios' 
-    ? (isCompactMode ? 16 : isSmallPhone ? 20 : 28) 
-    : (isCompactMode ? 6 : isLowEndDevice ? 8 : isSmallPhone ? 10 : 14);
-  const iconSizeVal = isCompactMode ? 16 : isLowEndDevice ? 18 : isSmallPhone ? 20 : isTablet ? 26 : 22;
-  const labelSize = isCompactMode ? 8 : isLowEndDevice ? 9 : isSmallPhone ? 10 : isTablet ? 13 : 11;
+  const tabBarStyle = {
+    backgroundColor: colors.surface,
+    borderTopColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingBottom: Platform.OS === 'android' ? 4 : 0,
+    height: Platform.OS === 'android' ? 60 : undefined,
+  };
 
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          position: 'absolute',
-          left: tabBarMargin,
-          right: tabBarMargin,
-          bottom: tabBarBottom,
-          borderRadius: 30,
-          borderWidth: 1,
-          borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
-          overflow: 'hidden',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: isDark ? 0.3 : 0.15,
-          shadowRadius: 12,
-          elevation: 8,
-          backgroundColor: 'transparent',
-          height: tabBarHeight,
-        },
-        tabBarBackground: () => (
-          <GlassBackground
-            intensity={80}
-            tint={isDark ? 'dark' : 'light'}
-            style={StyleSheet.absoluteFill}
-          />
-        ),
+        tabBarStyle,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabelStyle: {
-          fontSize: labelSize,
-          fontWeight: '500',
-          marginTop: isCompactMode ? -5 : isLowEndDevice ? -4 : -2,
-          marginBottom: isCompactMode ? 3 : isLowEndDevice ? 2 : 0,
-        },
-        tabBarIconStyle: {
-          marginTop: isCompactMode ? -2 : isLowEndDevice ? 0 : 2,
+          fontSize: 11,
+          fontWeight: '600',
+          letterSpacing: 0.1,
         },
       }}
     >
       <Tab.Screen
-        name="StatusTab"
-        component={StatusStack}
+        name="DoorsTab"
+        component={DoorsStack}
         options={{
           title: 'Doors',
-          tabBarIcon: ({ color, focused }) => (
-            <Animated.View style={{ transform: [{ scale: focused ? 1.1 : 1 }] }}>
-              <DoorOpen size={iconSizeVal} color={color} strokeWidth={focused ? 2.5 : 2} />
-            </Animated.View>
-          ),
+          tabBarIcon: ({ color, size }) => <DoorOpen size={size} color={color} strokeWidth={2} />,
         }}
       />
       <Tab.Screen
-        name="AddDoorTab"
-        component={AddDoorStack}
+        name="AddTab"
+        component={AddStack}
         options={{
           title: 'Add',
-          tabBarIcon: ({ color, focused }) => (
-            <Animated.View style={{ transform: [{ scale: focused ? 1.1 : 1 }] }}>
-              <Plus size={iconSizeVal} color={color} strokeWidth={focused ? 3 : 2.5} />
-            </Animated.View>
-          ),
+          tabBarIcon: ({ color, size }) => <Plus size={size} color={color} strokeWidth={2.5} />,
         }}
       />
       <Tab.Screen
@@ -278,11 +126,7 @@ function MainTabs() {
         component={HistoryStack}
         options={{
           title: 'History',
-          tabBarIcon: ({ color, focused }) => (
-            <Animated.View style={{ transform: [{ scale: focused ? 1.1 : 1 }] }}>
-              <History size={iconSizeVal} color={color} strokeWidth={focused ? 2.5 : 2} />
-            </Animated.View>
-          ),
+          tabBarIcon: ({ color, size }) => <History size={size} color={color} strokeWidth={2} />,
         }}
       />
       <Tab.Screen
@@ -290,45 +134,27 @@ function MainTabs() {
         component={AccountStack}
         options={{
           title: 'Account',
-          tabBarIcon: ({ color, focused }) => (
-            <Animated.View style={{ transform: [{ scale: focused ? 1.1 : 1 }] }}>
-              <User size={iconSizeVal} color={color} strokeWidth={focused ? 2.5 : 2} />
-            </Animated.View>
-          ),
+          tabBarIcon: ({ color, size }) => <User size={size} color={color} strokeWidth={2} />,
         }}
       />
     </Tab.Navigator>
   );
 }
 
+
 function AppNavigator() {
   const { colors, isDark } = useTheme();
   const [initialRoute, setInitialRoute] = useState(null);
-  const [showSplash, setShowSplash] = useState(true);
   const navigationRef = useRef(null);
 
   useEffect(() => {
-    checkInitialState();
+    AsyncStorage.multiGet(['token', 'tenant'])
+      .then(([tokenPair, tenantPair]) => {
+        const hasAuth = tokenPair[1] && tenantPair[1];
+        setInitialRoute(hasAuth ? 'MainTabs' : 'Login');
+      })
+      .catch(() => setInitialRoute('Login'));
   }, []);
-
-  const checkInitialState = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const tenant = await AsyncStorage.getItem('tenant');
-
-      if (!token || !tenant) {
-        setInitialRoute('Login');
-      } else {
-        setInitialRoute('MainTabs');
-      }
-    } catch (error) {
-      setInitialRoute('Login');
-    }
-  };
-
-  if (showSplash) {
-    return <SplashScreen onFinish={() => setShowSplash(false)} />;
-  }
 
   if (!initialRoute) {
     return <View style={{ flex: 1, backgroundColor: colors.background }} />;
@@ -339,7 +165,7 @@ function AppNavigator() {
       <StatusBar
         barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
-        translucent={Platform.OS === 'android'}
+        translucent={false}
       />
       <RootNavigationProvider refValue={navigationRef}>
         <NavigationContainer
@@ -351,7 +177,7 @@ function AppNavigator() {
               background: colors.background,
               card: colors.surface,
               text: colors.textPrimary,
-              border: colors.separator,
+              border: colors.border,
               notification: colors.primary,
             },
           }}
@@ -362,10 +188,10 @@ function AppNavigator() {
               headerShown: false,
               cardStyle: { backgroundColor: colors.background },
               gestureEnabled: true,
-              ...TransitionPresets.SlideFromRightIOS,
             }}
           >
             <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="ServerConfig" component={ServerConfigScreen} />
             <Stack.Screen name="MainTabs" component={MainTabs} />
           </Stack.Navigator>
         </NavigationContainer>
@@ -376,10 +202,12 @@ function AppNavigator() {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <AppNavigator />
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AppNavigator />
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

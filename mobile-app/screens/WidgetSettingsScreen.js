@@ -1,39 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  Switch,
-  ScrollView,
-  Animated,
+  View, Text, StyleSheet, TouchableOpacity, Alert,
+  Switch, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Smartphone, Lock, Shield, Info, Check } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../contexts/ThemeContext';
-import useResponsive from '../hooks/useResponsive';
 import WidgetService from '../services/WidgetService';
 import api from '../services/api';
-import { spacing, borderRadius } from '../constants/theme';
 
 export default function WidgetSettingsScreen({ navigation }) {
-  const { colors, isDark } = useTheme();
-  const { scaleFont, isSmallPhone, isTablet, tabBarPadding } = useResponsive();
-
+  const { colors } = useTheme();
   const [doors, setDoors] = useState([]);
   const [primaryDoor, setPrimaryDoor] = useState(null);
   const [widgetEnabled, setWidgetEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     try {
-      setLoading(true);
       const [doorsList, primary, enabled] = await Promise.all([
         api.getDoors(),
         WidgetService.getPrimaryDoor(),
@@ -56,156 +42,133 @@ export default function WidgetSettingsScreen({ navigation }) {
     }
     setWidgetEnabled(value);
     await WidgetService.setWidgetEnabled(value);
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const handleSelectDoor = async (door) => {
     setPrimaryDoor(door);
     await WidgetService.setPrimaryDoor(door);
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert('Primary Door Set', `${door.name} is now your widget quick unlock door.`);
   };
 
   const handleTestUnlock = async () => {
     const result = await WidgetService.quickUnlock();
     if (result.success) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', result.message);
     } else {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Failed', result.message);
     }
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-          onPress={() => navigation.goBack()}
-        >
-          <ChevronLeft size={isSmallPhone ? 18 : 20} color={colors.textSecondary} strokeWidth={2.5} />
+      <View style={[styles.header, { borderBottomColor: colors.separator }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <ChevronLeft size={24} color={colors.textPrimary} strokeWidth={2} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.textPrimary, fontSize: scaleFont(18) }]}>
-          Widget Settings
-        </Text>
-        <View style={{ width: 36 }} />
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Widget Settings</Text>
+        <View style={{ width: 32 }} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: tabBarPadding() }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Widget Enable Toggle */}
-        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
-          <View style={styles.sectionHeader}>
-            <Smartphone size={18} color={colors.primary} strokeWidth={2} />
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: scaleFont(15) }]}>
-              Quick Unlock Widget
-            </Text>
-          </View>
-          <Text style={[styles.sectionDescription, { color: colors.textSecondary, fontSize: scaleFont(13) }]}>
-            Add a widget to your home screen for instant door access with biometric authentication.
-          </Text>
-          
-          <View style={styles.toggleRow}>
-            <Text style={[styles.toggleLabel, { color: colors.textPrimary, fontSize: scaleFont(15) }]}>
-              Enable Widget
-            </Text>
-            <Switch
-              value={widgetEnabled}
-              onValueChange={handleToggleWidget}
-              trackColor={{ false: colors.fillSecondary, true: colors.primary }}
-              thumbColor="#fff"
-            />
-          </View>
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary} />
         </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* Primary Door Selection */}
-        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
-          <View style={styles.sectionHeader}>
-            <Shield size={18} color={colors.primary} strokeWidth={2} />
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: scaleFont(15) }]}>
-              Primary Door
+          {/* Widget Enable Toggle */}
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.sectionHeader}>
+              <Smartphone size={18} color={colors.primary} strokeWidth={2} />
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Quick Unlock Widget</Text>
+            </View>
+            <Text style={[styles.sectionDesc, { color: colors.textSecondary }]}>
+              Add a widget to your home screen for instant door access with biometric authentication.
             </Text>
+            <View style={styles.toggleRow}>
+              <Text style={[styles.toggleLabel, { color: colors.textPrimary }]}>Enable Widget</Text>
+              <Switch
+                value={widgetEnabled}
+                onValueChange={handleToggleWidget}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor="#fff"
+              />
+            </View>
           </View>
-          <Text style={[styles.sectionDescription, { color: colors.textSecondary, fontSize: scaleFont(13) }]}>
-            Select the door that will be unlocked when you tap the widget.
-          </Text>
 
-          {doors.map((door) => (
-            <TouchableOpacity
-              key={door.id}
-              style={[
-                styles.doorItem,
-                {
-                  backgroundColor: primaryDoor?.id === door.id ? colors.primaryDim : colors.fillTertiary,
-                  borderColor: primaryDoor?.id === door.id ? colors.primary : 'transparent',
-                },
-              ]}
-              onPress={() => handleSelectDoor(door)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.doorInfo}>
-                <Text style={[styles.doorName, { color: colors.textPrimary, fontSize: scaleFont(15) }]}>
-                  {door.name}
-                </Text>
-                <Text style={[styles.doorIp, { color: colors.textTertiary, fontSize: scaleFont(12) }]}>
-                  {door.terminal_ip}
-                </Text>
-              </View>
-              {primaryDoor?.id === door.id && (
-                <View style={[styles.checkIcon, { backgroundColor: colors.primary }]}>
-                  <Check size={14} color="#fff" strokeWidth={3} />
+          {/* Primary Door Selection */}
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.sectionHeader}>
+              <Shield size={18} color={colors.primary} strokeWidth={2} />
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Primary Door</Text>
+            </View>
+            <Text style={[styles.sectionDesc, { color: colors.textSecondary }]}>
+              Select the door that will be unlocked when you tap the widget.
+            </Text>
+            {doors.map(door => (
+              <TouchableOpacity
+                key={door.id}
+                style={[
+                  styles.doorItem,
+                  {
+                    backgroundColor: primaryDoor?.id === door.id ? colors.primaryDim : 'transparent',
+                    borderColor: primaryDoor?.id === door.id ? colors.primary : colors.border,
+                  },
+                ]}
+                onPress={() => handleSelectDoor(door)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.doorInfo}>
+                  <Text style={[styles.doorName, { color: colors.textPrimary }]}>{door.name}</Text>
+                  <Text style={[styles.doorIp, { color: colors.textSecondary }]}>{door.terminal_ip}</Text>
                 </View>
-              )}
+                {primaryDoor?.id === door.id && (
+                  <View style={[styles.checkIcon, { backgroundColor: colors.primary }]}>
+                    <Check size={14} color="#000" strokeWidth={3} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+            {doors.length === 0 && (
+              <Text style={[styles.noDoors, { color: colors.textSecondary }]}>No doors configured.</Text>
+            )}
+          </View>
+
+          {/* Security Info */}
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.sectionHeader}>
+              <Lock size={18} color={colors.success} strokeWidth={2} />
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Security</Text>
+            </View>
+            <View style={[styles.infoBox, { backgroundColor: `${colors.success}18` }]}>
+              <Info size={16} color={colors.success} strokeWidth={2} />
+              <Text style={[styles.infoText, { color: colors.success }]}>
+                Biometric authentication (Face ID/Fingerprint) is required each time you use the widget.
+              </Text>
+            </View>
+          </View>
+
+          {/* Test Button */}
+          {primaryDoor && widgetEnabled && (
+            <TouchableOpacity
+              style={[styles.testBtn, { backgroundColor: colors.primary }]}
+              onPress={handleTestUnlock}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.testBtnText}>Test Quick Unlock</Text>
             </TouchableOpacity>
-          ))}
-        </View>
+          )}
 
-        {/* Security Info */}
-        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
-          <View style={styles.sectionHeader}>
-            <Lock size={18} color={colors.success} strokeWidth={2} />
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: scaleFont(15) }]}>
-              Security
+          {/* Instructions */}
+          <View style={[styles.instructions, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.instructTitle, { color: colors.textPrimary }]}>How to add the widget:</Text>
+            <Text style={[styles.instructText, { color: colors.textSecondary }]}>
+              {'1. Long press on your home screen\n2. Tap "Widgets" or the + button\n3. Find "URZIS PASS" and select the widget\n4. Drag it to your home screen'}
             </Text>
           </View>
-          <View style={[styles.infoBox, { backgroundColor: colors.successDim }]}>
-            <Info size={16} color={colors.success} strokeWidth={2} />
-            <Text style={[styles.infoText, { color: colors.success, fontSize: scaleFont(13) }]}>
-              Biometric authentication (Face ID/Fingerprint) is required each time you use the widget to unlock a door.
-            </Text>
-          </View>
-        </View>
 
-        {/* Test Button */}
-        {primaryDoor && widgetEnabled && (
-          <TouchableOpacity
-            style={[styles.testButton, { backgroundColor: colors.primary }]}
-            onPress={handleTestUnlock}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.testButtonText, { fontSize: scaleFont(16) }]}>
-              Test Quick Unlock
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Instructions */}
-        <View style={[styles.instructions, { backgroundColor: colors.fillTertiary }]}>
-          <Text style={[styles.instructionsTitle, { color: colors.textPrimary, fontSize: scaleFont(14) }]}>
-            How to add the widget:
-          </Text>
-          <Text style={[styles.instructionsText, { color: colors.textSecondary, fontSize: scaleFont(13) }]}>
-            1. Long press on your home screen{'\n'}
-            2. Tap "Widgets" or the + button{'\n'}
-            3. Find "URZIS PASS" and select the widget{'\n'}
-            4. Drag it to your home screen
-          </Text>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -215,54 +178,47 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  title: { fontWeight: '600', letterSpacing: -0.3 },
-  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm },
+  backBtn: { padding: 4 },
+  title: { flex: 1, fontSize: 17, fontWeight: '600', textAlign: 'center' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  content: { padding: 16 },
   section: {
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
+    borderRadius: 12,
     borderWidth: 1,
+    padding: 16,
+    marginBottom: 12,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: spacing.sm,
+    marginBottom: 6,
   },
-  sectionTitle: { fontWeight: '600', letterSpacing: -0.2 },
-  sectionDescription: { marginBottom: spacing.md, lineHeight: 20 },
+  sectionTitle: { fontSize: 15, fontWeight: '600' },
+  sectionDesc: { fontSize: 13, lineHeight: 18, marginBottom: 12 },
   toggleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: spacing.sm,
   },
-  toggleLabel: { fontWeight: '500' },
+  toggleLabel: { fontSize: 15, fontWeight: '500' },
   doorItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.sm,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     borderWidth: 1.5,
+    marginBottom: 8,
   },
   doorInfo: { flex: 1 },
-  doorName: { fontWeight: '600', marginBottom: 2 },
-  doorIp: {},
+  doorName: { fontSize: 15, fontWeight: '600', marginBottom: 2 },
+  doorIp: { fontSize: 12 },
   checkIcon: {
     width: 24,
     height: 24,
@@ -270,27 +226,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  noDoors: { fontSize: 14, textAlign: 'center', paddingVertical: 8 },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
+    padding: 12,
+    borderRadius: 10,
   },
-  infoText: { flex: 1, lineHeight: 20 },
-  testButton: {
+  infoText: { flex: 1, fontSize: 13, lineHeight: 18 },
+  testBtn: {
     height: 52,
-    borderRadius: borderRadius.md,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: 12,
   },
-  testButtonText: { color: '#fff', fontWeight: '600' },
+  testBtnText: { color: '#000', fontSize: 16, fontWeight: '600' },
   instructions: {
-    padding: spacing.lg,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.xxl,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 32,
   },
-  instructionsTitle: { fontWeight: '600', marginBottom: spacing.sm },
-  instructionsText: { lineHeight: 22 },
+  instructTitle: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  instructText: { fontSize: 13, lineHeight: 20 },
 });

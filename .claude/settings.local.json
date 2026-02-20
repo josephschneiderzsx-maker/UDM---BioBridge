@@ -29,7 +29,15 @@
       "Bash(./gradlew clean:*)",
       "Bash(./gradlew assembleRelease:*)",
       "Bash(\"C:\\\\\\\\Program Files \\(x86\\)\\\\\\\\Microsoft Visual Studio\\\\\\\\2022\\\\\\\\BuildTools\\\\\\\\MSBuild\\\\\\\\Current\\\\\\\\Bin\\\\\\\\MSBuild.exe\":*)",
-      "Bash(\"C:\\\\Program Files \\(x86\\)\\\\Microsoft Visual Studio\\\\2022\\\\BuildTools\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"U:\\\\D-biobridgeSDKservice\\\\BioBridgeDoorControl\\\\BioBridgeDoorControlService\\\\BioBridgeDoorControlService.vbproj\" -p:Configuration=Release -v:minimal -nologo)"
+      "Bash(\"C:\\\\Program Files \\(x86\\)\\\\Microsoft Visual Studio\\\\2022\\\\BuildTools\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"U:\\\\D-biobridgeSDKservice\\\\BioBridgeDoorControl\\\\BioBridgeDoorControlService\\\\BioBridgeDoorControlService.vbproj\" -p:Configuration=Release -v:minimal -nologo)",
+      "Bash(file:*)",
+      "Bash(xxd:*)",
+      "Bash(npm install)",
+      "Bash(npx expo prebuild:*)",
+      "Bash(npx expo install:*)",
+      "Bash(npm install:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm audit:*)"
     ]
   }
 }

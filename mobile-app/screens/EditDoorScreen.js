@@ -1,25 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  ScrollView,
-  TouchableOpacity,
-  Animated,
+  View, Text, StyleSheet, KeyboardAvoidingView, Platform,
+  Alert, ScrollView, TouchableOpacity,
 } from 'react-native';
-import GlassBackground from '../components/GlassBackground';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Save, Server, Lock, Clock } from 'lucide-react-native';
-
-const FLOATING_HEADER_HEIGHT = 80;
-const TAB_BAR_PADDING_BOTTOM = 100;
+import { ChevronLeft, Trash2, Server, Clock } from 'lucide-react-native';
 import api from '../services/api';
 import Input from '../components/Input';
 import PrimaryButton from '../components/PrimaryButton';
-import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 export default function EditDoorScreen({ route, navigation }) {
@@ -34,58 +22,25 @@ export default function EditDoorScreen({ route, navigation }) {
   const [loading, setLoading] = useState(false);
   const [agents, setAgents] = useState([]);
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(24)).current;
-
   useEffect(() => {
-    loadAgents();
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 350,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 60,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    api.getAgents().then(setAgents).catch(() => {});
   }, []);
-
-  const loadAgents = async () => {
-    try {
-      const agentsList = await api.getAgents();
-      setAgents(agentsList);
-    } catch (error) {
-      console.error('Failed to load agents:', error);
-    }
-  };
 
   const handleSave = async () => {
     if (!name.trim() || !terminalIp.trim() || !agentId.trim()) {
-      Alert.alert('Missing Information', 'Please fill in all required fields');
+      Alert.alert('Missing fields', 'Name, IP address and Agent are required.');
       return;
     }
-
     setLoading(true);
     try {
-      const doorData = {
+      await api.updateDoor(door.id, {
         name: name.trim(),
         terminal_ip: terminalIp.trim(),
         terminal_port: parseInt(terminalPort) || 4370,
         default_delay: parseInt(defaultDelay) || 3000,
         agent_id: parseInt(agentId),
-      };
-
-      await api.updateDoor(door.id, doorData);
-      Alert.alert('Success', 'Door updated successfully', [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]);
+      });
+      navigation.goBack();
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {
@@ -93,215 +48,143 @@ export default function EditDoorScreen({ route, navigation }) {
     }
   };
 
+  const handleDelete = () => {
+    Alert.alert('Delete door', `Remove "${door.name}"? This cannot be undone.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.deleteDoor(door.id);
+            navigation.goBack();
+          } catch (e) {
+            Alert.alert('Error', e.message);
+          }
+        },
+      },
+    ]);
+  };
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <View style={styles.headerFloating}>
-        <GlassBackground intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={[styles.closeButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <X size={18} color={colors.textSecondary} strokeWidth={2.5} />
-          </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Edit Door</Text>
-          <View style={styles.placeholder} />
-        </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.separator }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <ChevronLeft size={24} color={colors.textPrimary} strokeWidth={2} />
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Edit Door</Text>
+        <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn}>
+          <Trash2 size={20} color={colors.danger} strokeWidth={2} />
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={[styles.keyboardView, { paddingTop: FLOATING_HEADER_HEIGHT }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
       >
-        <Animated.View
-          style={[
-            styles.content,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={[styles.scrollContent, { paddingBottom: TAB_BAR_PADDING_BOTTOM }]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.form}>
-              <Input
-                label="Door Name"
-                value={name}
-                onChangeText={setName}
-                placeholder="e.g., Main Entrance"
-                icon={<Lock size={18} color={colors.textTertiary} strokeWidth={1.5} />}
-              />
+          <Input
+            label="Door Name"
+            value={name}
+            onChangeText={setName}
+            placeholder="Main Entrance"
+            autoCapitalize="words"
+          />
+          <Input
+            label="Terminal IP"
+            value={terminalIp}
+            onChangeText={setTerminalIp}
+            placeholder="192.168.1.100"
+            keyboardType="decimal-pad"
+            icon={<Server size={18} color={colors.textSecondary} strokeWidth={2} />}
+          />
+          <Input
+            label="Port"
+            value={terminalPort}
+            onChangeText={setTerminalPort}
+            placeholder="4370"
+            keyboardType="number-pad"
+          />
+          <Input
+            label="Unlock Duration (ms)"
+            value={defaultDelay}
+            onChangeText={setDefaultDelay}
+            placeholder="3000"
+            keyboardType="number-pad"
+            icon={<Clock size={18} color={colors.textSecondary} strokeWidth={2} />}
+          />
 
-              <Input
-                label="Terminal IP"
-                value={terminalIp}
-                onChangeText={setTerminalIp}
-                placeholder="192.168.1.100"
-                keyboardType="numeric"
-                icon={<Server size={18} color={colors.textTertiary} strokeWidth={1.5} />}
-              />
-
-              <View style={styles.row}>
-                <View style={styles.halfWidth}>
-                  <Input
-                    label="Port"
-                    value={terminalPort}
-                    onChangeText={setTerminalPort}
-                    placeholder="4370"
-                    keyboardType="numeric"
-                  />
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Agent</Text>
+          <View style={[styles.agentList, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+            {agents.map(agent => (
+              <TouchableOpacity
+                key={agent.id}
+                style={[
+                  styles.agentRow,
+                  { borderBottomColor: colors.separator },
+                  String(agentId) === String(agent.id) && { backgroundColor: colors.primaryDim },
+                ]}
+                onPress={() => setAgentId(String(agent.id))}
+              >
+                <View style={[
+                  styles.radio,
+                  { borderColor: String(agentId) === String(agent.id) ? colors.primary : colors.border },
+                ]}>
+                  {String(agentId) === String(agent.id) && (
+                    <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
+                  )}
                 </View>
-                <View style={styles.halfWidth}>
-                  <Input
-                    label="Delay (ms)"
-                    value={defaultDelay}
-                    onChangeText={setDefaultDelay}
-                    placeholder="3000"
-                    keyboardType="numeric"
-                    icon={<Clock size={18} color={colors.textTertiary} strokeWidth={1.5} />}
-                  />
-                </View>
-              </View>
+                <Text style={[styles.agentName, { color: colors.textPrimary }]}>{agent.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-              <Input
-                label="Agent ID"
-                value={agentId}
-                onChangeText={setAgentId}
-                placeholder="1"
-                keyboardType="numeric"
-              />
-
-              {agents.length > 0 && (
-                <View style={styles.agentsSection}>
-                  <Text style={[styles.agentsLabel, { color: colors.textSecondary }]}>Available Agents</Text>
-                  {agents.map((agent) => (
-                    <TouchableOpacity
-                      key={agent.id}
-                      style={[
-                        styles.agentItem,
-                        { backgroundColor: colors.surface, borderColor: colors.separator },
-                        agentId === agent.id.toString() && { borderColor: colors.primary, backgroundColor: colors.primaryDim },
-                      ]}
-                      onPress={() => setAgentId(agent.id.toString())}
-                    >
-                      <Text
-                        style={[
-                          styles.agentText,
-                          { color: colors.textPrimary },
-                          agentId === agent.id.toString() && { color: colors.primary, fontWeight: '600' },
-                        ]}
-                      >
-                        {agent.name} (ID: {agent.id})
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-
-            <PrimaryButton
-              title="Save Changes"
-              onPress={handleSave}
-              loading={loading}
-              icon={<Save size={16} color="#FFFFFF" strokeWidth={2.5} />}
-            />
-          </ScrollView>
-        </Animated.View>
+          <PrimaryButton
+            title="Save Changes"
+            onPress={handleSave}
+            loading={loading}
+            style={{ marginTop: 24 }}
+          />
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-  },
-  headerFloating: {
-    position: 'absolute',
-    top: 0,
-    left: 20,
-    right: 20,
-    zIndex: 10,
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  closeButton: {
-    width: 36,
-    height: 36,
+  backBtn: { padding: 4 },
+  title: { flex: 1, fontSize: 17, fontWeight: '600', textAlign: 'center' },
+  deleteBtn: { padding: 4 },
+  content: { padding: 16 },
+  label: { fontSize: 13, fontWeight: '500', marginBottom: 6, marginLeft: 2 },
+  agentList: { borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
+  agentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 12,
+  },
+  radio: {
+    width: 20,
+    height: 20,
     borderRadius: 10,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    letterSpacing: -0.3,
-  },
-  placeholder: {
-    width: 36,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxxl,
-  },
-  form: {
-    marginBottom: spacing.xl,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  halfWidth: {
-    flex: 1,
-  },
-  agentsSection: {
-    marginTop: spacing.sm,
-  },
-  agentsLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: spacing.sm,
-    letterSpacing: 0.2,
-    textTransform: 'uppercase',
-  },
-  agentItem: {
-    padding: 14,
-    borderRadius: borderRadius.md,
-    marginBottom: 6,
-    borderWidth: 1,
-  },
-  agentText: {
-    fontSize: 14,
-  },
+  radioDot: { width: 10, height: 10, borderRadius: 5 },
+  agentName: { fontSize: 15 },
 });

@@ -1,34 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  TouchableOpacity,
-  Animated,
-  Platform,
-  Dimensions,
+  View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, User, Lock, LogOut, Users, Mail, Save, Smartphone } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+import { User, Lock, LogOut, Users, Smartphone, ChevronRight } from 'lucide-react-native';
 import api from '../services/api';
 import Input from '../components/Input';
 import PrimaryButton from '../components/PrimaryButton';
-import AnimatedThemeSwitch from '../components/AnimatedThemeSwitch';
-import { spacing, borderRadius } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRootNavigation } from '../contexts/RootNavigationContext';
-import useResponsive from '../hooks/useResponsive';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+import WidgetService from '../services/WidgetService';
 
 export default function AccountScreen({ navigation }) {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, toggleTheme } = useTheme();
   const { resetToLogin } = useRootNavigation();
-  const { scaleFont, spacing: rSpacing, isSmallPhone, isTablet, contentMaxWidth } = useResponsive();
-
   const [profile, setProfile] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -39,50 +24,25 @@ export default function AccountScreen({ navigation }) {
   const [changingPassword, setChangingPassword] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
-
-  const HEADER_TOP_PADDING = Math.max(rSpacing(24), SCREEN_HEIGHT * 0.02) + (Platform.OS === 'android' ? 10 : 0);
-
-  useEffect(() => {
-    loadProfile();
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 350,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 50,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+  useEffect(() => { loadProfile(); }, []);
 
   const loadProfile = async () => {
     try {
-      const data = await api.getProfile();
-      setProfile(data);
-      setFirstName(data.first_name || '');
-      setLastName(data.last_name || '');
-      setIsAdmin(data.is_admin || false);
+      const p = await api.getProfile();
+      setProfile(p);
+      setFirstName(p.first_name || '');
+      setLastName(p.last_name || '');
+      setIsAdmin(p.role === 'admin');
     } catch (error) {
-      Alert.alert('Error', error.message);
+      if (error.message === 'Session expired') resetToLogin?.();
     }
   };
 
   const handleSaveProfile = async () => {
-    if (!firstName.trim() || !lastName.trim()) {
-      Alert.alert('Error', 'First name and last name are required');
-      return;
-    }
     setSavingProfile(true);
     try {
       await api.updateProfile(firstName.trim(), lastName.trim());
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', 'Profile updated');
+      Alert.alert('Saved', 'Profile updated successfully.');
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {
@@ -92,25 +52,24 @@ export default function AccountScreen({ navigation }) {
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'All password fields are required');
+      Alert.alert('Missing fields', 'Please fill in all password fields.');
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match');
+      Alert.alert('Mismatch', 'New passwords do not match.');
       return;
     }
     if (newPassword.length < 6) {
-      Alert.alert('Error', 'New password must be at least 6 characters');
+      Alert.alert('Too short', 'Password must be at least 6 characters.');
       return;
     }
     setChangingPassword(true);
     try {
       await api.changePassword(currentPassword, newPassword);
+      Alert.alert('Success', 'Password changed successfully.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', 'Password changed successfully');
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {
@@ -119,229 +78,186 @@ export default function AccountScreen({ navigation }) {
   };
 
   const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Sign Out',
+        text: 'Sign out',
         style: 'destructive',
         onPress: async () => {
-          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           await api.clearAuth();
-          resetToLogin();
+          await WidgetService.clearWidgetData();
+          resetToLogin?.();
         },
       },
     ]);
   };
 
-  const sectionPadding = isSmallPhone ? 14 : isTablet ? 24 : 20;
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Animated.View style={[styles.inner, { opacity: fadeAnim }]}>
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: HEADER_TOP_PADDING }]}>
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-            onPress={() => navigation.goBack()}
-          >
-            <ChevronLeft size={isSmallPhone ? 18 : 20} color={colors.textSecondary} strokeWidth={2.5} />
-          </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.textPrimary, fontSize: scaleFont(18) }]}>Account</Text>
-          <AnimatedThemeSwitch size={isSmallPhone ? 'small' : 'medium'} />
+      <View style={[styles.header, { borderBottomColor: colors.separator }]}>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Account</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Profile */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>PROFILE</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.profileRow}>
+              <View style={[styles.avatar, { backgroundColor: colors.primaryDim }]}>
+                <User size={22} color={colors.primary} strokeWidth={2} />
+              </View>
+              <View>
+                <Text style={[styles.profileName, { color: colors.textPrimary }]}>
+                  {profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email : '...'}
+                </Text>
+                <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>
+                  {profile?.email}
+                  {isAdmin ? '  ·  Admin' : ''}
+                </Text>
+              </View>
+            </View>
+          </View>
+          <Input
+            label="First Name"
+            value={firstName}
+            onChangeText={setFirstName}
+            placeholder="John"
+            autoCapitalize="words"
+          />
+          <Input
+            label="Last Name"
+            value={lastName}
+            onChangeText={setLastName}
+            placeholder="Doe"
+            autoCapitalize="words"
+          />
+          <PrimaryButton title="Save Profile" onPress={handleSaveProfile} loading={savingProfile} size="small" />
         </View>
 
-        <Animated.View style={{ flex: 1, transform: [{ translateY: slideAnim }] }}>
-          <ScrollView
-            contentContainerStyle={[
-              styles.scrollContent,
-              {
-                paddingHorizontal: rSpacing(24),
-                maxWidth: contentMaxWidth(),
-                alignSelf: isTablet ? 'center' : 'stretch',
-                width: isTablet ? contentMaxWidth() : '100%',
-              },
-            ]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Profile Section */}
-            <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.separator, padding: sectionPadding }]}>
-              <View style={styles.sectionHeader}>
-                <User size={isSmallPhone ? 14 : 16} color={colors.primary} strokeWidth={2} />
-                <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: scaleFont(15) }]}>Profile</Text>
-              </View>
+        {/* Password */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>CHANGE PASSWORD</Text>
+          <Input
+            label="Current Password"
+            value={currentPassword}
+            onChangeText={setCurrentPassword}
+            placeholder="••••••••"
+            secureTextEntry
+            icon={<Lock size={18} color={colors.textSecondary} strokeWidth={2} />}
+          />
+          <Input
+            label="New Password"
+            value={newPassword}
+            onChangeText={setNewPassword}
+            placeholder="••••••••"
+            secureTextEntry
+          />
+          <Input
+            label="Confirm New Password"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            placeholder="••••••••"
+            secureTextEntry
+          />
+          <PrimaryButton
+            title="Change Password"
+            onPress={handleChangePassword}
+            loading={changingPassword}
+            variant="outline"
+            size="small"
+          />
+        </View>
 
-              {profile && (
-                <View style={[styles.emailRow, { backgroundColor: colors.fillTertiary }]}>
-                  <Mail size={14} color={colors.textTertiary} strokeWidth={2} />
-                  <Text style={[styles.emailText, { color: colors.textSecondary, fontSize: scaleFont(14) }]}>{profile.email}</Text>
-                </View>
-              )}
-
-              <Input
-                label="First Name"
-                value={firstName}
-                onChangeText={setFirstName}
-                placeholder="First name"
-              />
-              <Input
-                label="Last Name"
-                value={lastName}
-                onChangeText={setLastName}
-                placeholder="Last name"
-              />
-              <PrimaryButton
-                title="Save Profile"
-                onPress={handleSaveProfile}
-                loading={savingProfile}
-                variant="secondary"
-                size="small"
-                icon={<Save size={isSmallPhone ? 14 : 16} color={colors.primary} strokeWidth={2} />}
+        {/* Preferences */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>PREFERENCES</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.row}>
+              <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>Dark Mode</Text>
+              <Switch
+                value={isDark}
+                onValueChange={toggleTheme}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor="#fff"
               />
             </View>
+          </View>
+        </View>
 
-            {/* Password Section */}
-            <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.separator, padding: sectionPadding }]}>
-              <View style={styles.sectionHeader}>
-                <Lock size={isSmallPhone ? 14 : 16} color={colors.primary} strokeWidth={2} />
-                <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: scaleFont(15) }]}>Change Password</Text>
-              </View>
-              <Input
-                label="Current Password"
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                placeholder="Enter current password"
-                secureTextEntry
-              />
-              <Input
-                label="New Password"
-                value={newPassword}
-                onChangeText={setNewPassword}
-                placeholder="Enter new password"
-                secureTextEntry
-              />
-              <Input
-                label="Confirm Password"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="Confirm new password"
-                secureTextEntry
-              />
-              <PrimaryButton
-                title="Change Password"
-                onPress={handleChangePassword}
-                loading={changingPassword}
-                variant="secondary"
-                size="small"
-                icon={<Lock size={isSmallPhone ? 14 : 16} color={colors.primary} strokeWidth={2} />}
-              />
-            </View>
-
-            {/* Admin: Manage Users */}
-            {isAdmin && (
+        {/* Admin */}
+        {isAdmin && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>ADMINISTRATION</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <TouchableOpacity
-                style={[styles.menuButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
+                style={styles.row}
                 onPress={() => navigation.navigate('UsersList')}
-                activeOpacity={0.7}
               >
-                <View style={[styles.menuIconWrapper, { backgroundColor: colors.primaryDim }]}>
-                  <Users size={isSmallPhone ? 16 : 18} color={colors.primary} strokeWidth={2} />
+                <View style={styles.rowLeft}>
+                  <Users size={18} color={colors.primary} strokeWidth={2} />
+                  <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>Manage Users</Text>
                 </View>
-                <Text style={[styles.menuText, { color: colors.textPrimary, fontSize: scaleFont(16) }]}>Manage Users</Text>
-                <ChevronLeft size={16} color={colors.textTertiary} strokeWidth={2} style={{ transform: [{ rotate: '180deg' }] }} />
+                <ChevronRight size={18} color={colors.textTertiary} strokeWidth={2} />
               </TouchableOpacity>
-            )}
+            </View>
+          </View>
+        )}
 
-            {/* Widget Settings */}
+        {/* Widget */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>QUICK ACCESS</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <TouchableOpacity
-              style={[styles.menuButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
+              style={styles.row}
               onPress={() => navigation.navigate('WidgetSettings')}
-              activeOpacity={0.7}
             >
-              <View style={[styles.menuIconWrapper, { backgroundColor: colors.primaryDim }]}>
-                <Smartphone size={isSmallPhone ? 16 : 18} color={colors.primary} strokeWidth={2} />
+              <View style={styles.rowLeft}>
+                <Smartphone size={18} color={colors.primary} strokeWidth={2} />
+                <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>Widget Settings</Text>
               </View>
-              <Text style={[styles.menuText, { color: colors.textPrimary, fontSize: scaleFont(16) }]}>Quick Unlock Widget</Text>
-              <ChevronLeft size={16} color={colors.textTertiary} strokeWidth={2} style={{ transform: [{ rotate: '180deg' }] }} />
+              <ChevronRight size={18} color={colors.textTertiary} strokeWidth={2} />
             </TouchableOpacity>
+          </View>
+        </View>
 
-            {/* Sign Out */}
-            <TouchableOpacity
-              style={[styles.menuButton, { backgroundColor: colors.surface, borderColor: colors.separator }]}
-              onPress={handleLogout}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconWrapper, { backgroundColor: colors.dangerDim }]}>
-                <LogOut size={isSmallPhone ? 16 : 18} color={colors.danger} strokeWidth={2} />
-              </View>
-              <Text style={[styles.menuText, { color: colors.danger, fontSize: scaleFont(16) }]}>Sign Out</Text>
-            </TouchableOpacity>
-
-            <View style={{ height: spacing.xxxl }} />
-          </ScrollView>
-        </Animated.View>
-      </Animated.View>
+        {/* Logout */}
+        <View style={[styles.section, { marginBottom: 32 }]}>
+          <PrimaryButton title="Sign Out" onPress={handleLogout} variant="danger" />
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { flex: 1 },
   header: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  title: { fontSize: 20, fontWeight: '700' },
+  content: { padding: 16 },
+  section: { marginBottom: 24 },
+  sectionTitle: { fontSize: 12, fontWeight: '600', marginBottom: 8, marginLeft: 2, letterSpacing: 0.5 },
+  card: { borderRadius: 12, borderWidth: 1, overflow: 'hidden', marginBottom: 12 },
+  profileRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileName: { fontSize: 16, fontWeight: '600', marginBottom: 2 },
+  profileEmail: { fontSize: 13 },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.md,
+    padding: 14,
   },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  title: { fontWeight: '600', letterSpacing: -0.3 },
-  scrollContent: { paddingTop: spacing.sm },
-  section: {
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: spacing.md,
-  },
-  sectionTitle: { fontWeight: '600', letterSpacing: -0.2 },
-  emailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.md,
-  },
-  emailText: {},
-  menuButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-  },
-  menuIconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  menuText: { flex: 1, fontWeight: '500', letterSpacing: -0.2 },
+  rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  rowLabel: { fontSize: 15 },
 });

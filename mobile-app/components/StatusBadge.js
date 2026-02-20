@@ -1,170 +1,77 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { borderRadius, spacing } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
-import useResponsive from '../hooks/useResponsive';
 
-/**
- * Premium status badge with pulse animation and responsive sizing
- */
-export default function StatusBadge({ status, size = 'medium' }) {
-  const { colors, isDark } = useTheme();
-  const { scaleFont, isSmallPhone } = useResponsive();
-  
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0.3)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+export default function StatusBadge({ status }) {
+  const { colors } = useTheme();
+  const isUnlocked = status === 'Unlocked';
 
+  const color = isUnlocked ? colors.success : colors.textSecondary;
+  const bg = isUnlocked
+    ? 'rgba(50, 215, 75, 0.14)'
+    : 'rgba(136, 136, 136, 0.10)';
+
+  // Pulse the dot when unlocked
+  const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    // Entrance animation
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-
-    // Pulse animation
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.8,
-          duration: 1200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1200,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    const glow = Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, {
-          toValue: 0.6,
-          duration: 1200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowAnim, {
-          toValue: 0.3,
-          duration: 1200,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    pulse.start();
-    glow.start();
-
-    return () => {
-      pulse.stop();
-      glow.stop();
-    };
-  }, []);
-
-  const getStatusColor = () => {
-    const s = status?.toLowerCase();
-    if (s === 'open' || s === 'unlocked') return colors.success;
-    if (s === 'error' || s === 'offline') return colors.danger;
-    if (s === 'timeout') return colors.warning;
-    return colors.primary;
-  };
-
-  const getStatusText = () => {
-    const s = status?.toLowerCase();
-    if (s === 'open' || s === 'unlocked') return 'Unlocked';
-    if (s === 'error') return 'Error';
-    if (s === 'offline') return 'Offline';
-    if (s === 'timeout') return 'Timeout';
-    return 'Secured';
-  };
-
-  const statusColor = getStatusColor();
-  const isSmall = size === 'small';
-
-  // Responsive sizing
-  const containerPadding = isSmall
-    ? { horizontal: isSmallPhone ? 8 : 10, vertical: isSmallPhone ? 4 : 5 }
-    : { horizontal: isSmallPhone ? 12 : 16, vertical: isSmallPhone ? 6 : 8 };
-
-  const dotSize = isSmall ? (isSmallPhone ? 5 : 6) : (isSmallPhone ? 6 : 7);
-  const fontSize = isSmall ? scaleFont(11) : scaleFont(13);
+    if (isUnlocked) {
+      const anim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulse, { toValue: 1.6, duration: 700, useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        ])
+      );
+      anim.start();
+      return () => anim.stop();
+    } else {
+      pulse.setValue(1);
+    }
+  }, [isUnlocked]);
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
-          paddingHorizontal: containerPadding.horizontal,
-          paddingVertical: containerPadding.vertical,
-          opacity: fadeAnim,
-        },
-      ]}
-    >
-      <View style={[styles.dotWrapper, { width: dotSize + 4, height: dotSize + 4 }]}>
-        <Animated.View
-          style={[
-            styles.pulse,
-            {
-              backgroundColor: statusColor,
-              width: dotSize + 4,
-              height: dotSize + 4,
-              borderRadius: (dotSize + 4) / 2,
-              transform: [{ scale: pulseAnim }],
-              opacity: glowAnim,
-            },
-          ]}
-        />
-        <View
-          style={[
-            styles.dot,
-            {
-              backgroundColor: statusColor,
-              width: dotSize,
-              height: dotSize,
-              borderRadius: dotSize / 2,
-            },
-          ]}
-        />
+    <View style={[styles.badge, { backgroundColor: bg }]}>
+      <View style={styles.dotWrap}>
+        {isUnlocked && (
+          <Animated.View
+            style={[
+              styles.dotRing,
+              { backgroundColor: color, transform: [{ scale: pulse }], opacity: 0.35 },
+            ]}
+          />
+        )}
+        <View style={[styles.dot, { backgroundColor: color }]} />
       </View>
-      <Text
-        style={[
-          styles.text,
-          {
-            color: statusColor,
-            fontSize,
-          },
-        ]}
-      >
-        {getStatusText()}
-      </Text>
-    </Animated.View>
+      <Text style={[styles.text, { color }]}>{status || 'Secured'}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: borderRadius.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
     alignSelf: 'center',
-    borderWidth: 1,
+    gap: 7,
   },
-  dotWrapper: {
+  dotWrap: {
+    width: 8,
+    height: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.sm,
   },
-  pulse: {
+  dotRing: {
     position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
-  dot: {},
-  text: {
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
+  text: { fontSize: 13, fontWeight: '600' },
 });
