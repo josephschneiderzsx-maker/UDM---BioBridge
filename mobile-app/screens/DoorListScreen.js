@@ -99,7 +99,7 @@ export default function DoorListScreen({ navigation }) {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.separator }]}>
         <View style={styles.logoWrap}>
-          <Logo width={110} variant="white" />
+          <Logo width={110} />
           {quota && (
             <View style={[
               styles.quotaBadge,
@@ -132,15 +132,6 @@ export default function DoorListScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Quota at-limit warning */}
-      {quotaAtLimit && (
-        <View style={[styles.limitBanner, { backgroundColor: colors.dangerDim, borderColor: colors.danger }]}>
-          <Text style={[styles.limitText, { color: colors.danger }]}>
-            Door limit reached ({quota.used}/{quota.quota}). Upgrade your plan to add more.
-          </Text>
-        </View>
-      )}
 
       {/* List */}
       {loading ? (
@@ -218,14 +209,6 @@ const styles = StyleSheet.create({
   },
   pendingText: { fontSize: 12, fontWeight: '700', color: '#000' },
   iconBtn: { padding: 4 },
-  limitBanner: {
-    marginHorizontal: 16,
-    marginTop: 10,
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  limitText: { fontSize: 12, fontWeight: '500', textAlign: 'center' },
   content: { padding: 16 },
   emptyContent: { flex: 1, justifyContent: 'center' },
   empty: { alignItems: 'center', paddingVertical: 48 },

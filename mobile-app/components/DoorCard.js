@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
-import { ChevronRight, Lock } from 'lucide-react-native';
+import { ChevronRight, DoorOpen } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 
 export default function DoorCard({ door, onPress, onLongPress }) {
@@ -19,7 +19,7 @@ export default function DoorCard({ door, onPress, onLongPress }) {
       delayLongPress={400}
     >
       <View style={[styles.iconBox, { backgroundColor: colors.primaryDim }]}>
-        <Lock size={19} color={colors.primary} strokeWidth={2} />
+        <DoorOpen size={20} color={colors.primary} strokeWidth={2} />
       </View>
 
       <View style={styles.info}>

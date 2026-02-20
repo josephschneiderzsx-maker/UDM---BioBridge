@@ -2,12 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, Alert, TouchableOpacity,
   ActivityIndicator, Animated, PanResponder, Dimensions,
-  Modal, Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Haptics from 'expo-haptics';
-import { X, Unlock, Lock, Activity, Bell, BellOff, Shield } from 'lucide-react-native';
+import { X, Unlock, Lock, Activity, Bell, BellOff } from 'lucide-react-native';
 import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import { useTheme } from '../contexts/ThemeContext';
@@ -25,19 +24,18 @@ export default function DoorControlScreen({ route, navigation }) {
   const [status, setStatus] = useState('Secured');
   const [licenseStatus, setLicenseStatus] = useState(null);
   const [notifyEnabled, setNotifyEnabled] = useState(false);
-  const [showBioPulse, setShowBioPulse] = useState(false);
 
-  // Swipe-down-to-dismiss
+  // Animated translateY for swipe-to-dismiss
   const translateY = useRef(new Animated.Value(0)).current;
-  const panResponder = useRef(PanResponder.create({
-    onStartShouldSetPanResponder: () => false,
-    onMoveShouldSetPanResponder: (_, g) =>
-      g.dy > 10 && Math.abs(g.dy) > Math.abs(g.dx) * 1.5,
+
+  // PanResponder attached ONLY to the drag handle
+  const dragPanResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
     onPanResponderMove: (_, g) => {
       if (g.dy > 0) translateY.setValue(g.dy);
     },
     onPanResponderRelease: (_, g) => {
-      if (g.dy > 90 || g.vy > 0.55) {
+      if (g.dy > 80 || g.vy > 0.4) {
         Animated.timing(translateY, {
           toValue: SCREEN_HEIGHT,
           duration: 230,
@@ -54,17 +52,17 @@ export default function DoorControlScreen({ route, navigation }) {
     },
   })).current;
 
-  // Pulse animation for the button
+  // Pulse ring animation
   const pulseAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    const pulse = Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.06, duration: 900, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.08, duration: 950, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 950, useNativeDriver: true }),
       ])
     );
-    pulse.start();
-    return () => pulse.stop();
+    loop.start();
+    return () => loop.stop();
   }, []);
 
   useEffect(() => {
@@ -108,20 +106,17 @@ export default function DoorControlScreen({ route, navigation }) {
       if (hasHardware) {
         const isEnrolled = await LocalAuthentication.isEnrolledAsync();
         if (isEnrolled) {
-          setShowBioPulse(true);
           const result = await LocalAuthentication.authenticateAsync({
             promptMessage: `Unlock ${door.name}`,
             cancelLabel: 'Cancel',
             fallbackLabel: 'Use Passcode',
             disableDeviceFallback: false,
           });
-          setShowBioPulse(false);
           if (!result.success) return;
         }
       }
       await openDoor();
     } catch {
-      setShowBioPulse(false);
       Alert.alert('Error', 'Authentication failed');
     }
   };
@@ -169,29 +164,33 @@ export default function DoorControlScreen({ route, navigation }) {
 
   const isExpired = licenseStatus?.status === 'expired' || licenseStatus?.status === 'grace';
   const unlocked = status === 'Unlocked';
-
   const btnColor = unlocked ? colors.success : colors.primary;
 
   return (
     <Animated.View
-      style={[styles.root, { backgroundColor: colors.background, transform: [{ translateY }] }]}
+      style={[
+        styles.root,
+        { backgroundColor: colors.background, transform: [{ translateY }] },
+      ]}
     >
+      {/* Top safe area only — bottom handled manually */}
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* Drag handle */}
-        <View style={styles.dragArea} {...panResponder.panHandlers}>
-          <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
+
+        {/* ── Drag handle — PanResponder here only ── */}
+        <View style={styles.handleArea} {...dragPanResponder.panHandlers}>
+          <View style={[styles.handle, { backgroundColor: colors.border }]} />
         </View>
 
-        {/* Header */}
+        {/* ── Header ── */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
             <X size={20} color={colors.textSecondary} strokeWidth={2} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+            <Text style={[styles.doorName, { color: colors.textPrimary }]} numberOfLines={1}>
               {door.name}
             </Text>
-            <Text style={[styles.headerSub, { color: colors.textTertiary }]}>
+            <Text style={[styles.doorIp, { color: colors.textTertiary }]}>
               {door.terminal_ip}
             </Text>
           </View>
@@ -216,24 +215,25 @@ export default function DoorControlScreen({ route, navigation }) {
           </View>
         )}
 
-        {/* Status */}
+        {/* ── Status badge ── */}
         <View style={styles.statusRow}>
           <StatusBadge status={status} />
         </View>
 
-        {/* Thumb zone — button pushed toward lower center */}
-        <View style={styles.thumbZone}>
-          {/* Outer glow ring */}
+        {/* ── Centered button zone ── */}
+        <View style={styles.centerZone}>
+          {/* Glow ring */}
           <Animated.View
             style={[
               styles.glowRing,
               {
-                borderColor: `${btnColor}30`,
+                borderColor: `${btnColor}28`,
                 transform: [{ scale: pulseAnim }],
               },
             ]}
           />
 
+          {/* Main unlock button */}
           <TouchableOpacity
             style={[
               styles.unlockBtn,
@@ -262,6 +262,7 @@ export default function DoorControlScreen({ route, navigation }) {
             )}
           </TouchableOpacity>
 
+          {/* Lock now button */}
           {unlocked && (
             <TouchableOpacity
               style={[styles.lockNowBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
@@ -275,17 +276,12 @@ export default function DoorControlScreen({ route, navigation }) {
           )}
         </View>
 
-        {/* Bottom actions bar */}
-        <View
-          style={[
-            styles.actionsBar,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              marginBottom: (insets.bottom || 8) + 8,
-            },
-          ]}
-        >
+        {/* ── Bottom actions — respects navigation bar height ── */}
+        <View style={[styles.actionsBar, {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          marginBottom: insets.bottom + 12,
+        }]}>
           <TouchableOpacity
             style={styles.action}
             onPress={() => navigation.navigate('ActivityLog', { door })}
@@ -304,19 +300,25 @@ export default function DoorControlScreen({ route, navigation }) {
             <Text style={[styles.actionLabel, { color: colors.textPrimary }]}>Notifications</Text>
           </TouchableOpacity>
         </View>
+
       </SafeAreaView>
     </Animated.View>
   );
 }
 
+const BTN_SIZE = 172;
+const RING_SIZE = BTN_SIZE + 40;
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  dragArea: {
+  handleArea: {
     alignItems: 'center',
     paddingTop: 12,
-    paddingBottom: 6,
+    paddingBottom: 8,
+    // Larger touch target for the drag handle
+    paddingHorizontal: 80,
   },
-  dragHandle: {
+  handle: {
     width: 40,
     height: 4,
     borderRadius: 2,
@@ -337,12 +339,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
-  headerTitle: {
+  doorName: {
     fontSize: 17,
     fontWeight: '600',
     letterSpacing: -0.2,
   },
-  headerSub: {
+  doorIp: {
     fontSize: 12,
     marginTop: 1,
   },
@@ -362,32 +364,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
-  // Thumb zone — flex end puts button in lower 40% of screen
-  thumbZone: {
+  // Centered zone takes all available space and centers the button
+  centerZone: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingBottom: 32,
+    justifyContent: 'center',
   },
   glowRing: {
     position: 'absolute',
-    bottom: 32 + 180 / 2 - 115,
-    width: 230,
-    height: 230,
-    borderRadius: 115,
-    borderWidth: 12,
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: RING_SIZE / 2,
+    borderWidth: 14,
   },
   unlockBtn: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
+    width: BTN_SIZE,
+    height: BTN_SIZE,
+    borderRadius: BTN_SIZE / 2,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 10,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.45,
-    shadowRadius: 24,
-    elevation: 14,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 12,
   },
   unlockLabel: {
     fontSize: 14,
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 22,
+    marginTop: 24,
     paddingHorizontal: 22,
     paddingVertical: 11,
     borderRadius: 24,
