@@ -20,7 +20,7 @@ const EVENT_CODE_MAP = {
   '1':   'Door Accidental Open',  '4':  'Door Left Open',
   '5':   'Door Close',            '7':  'Remote Release Alarm',
   '8':   'Remote Open Door',      '9':  'Remote Close Door',
-  '10':  'Door Open',             '11': 'Door Not Open',
+  '10':  'Door Open',             '11': 'Door Open',
   '22':  'Timezone Denied',       '23': 'Access Denied',
   '53':  'Exit Button',           '55': 'Disassemble the Alarm',
   '58':  'Wrong Press Alarm',     '100':'Invalid ID',
@@ -28,22 +28,54 @@ const EVENT_CODE_MAP = {
   '301': 'Connected',             '302':'Disconnected',
 };
 
-const ENTRY_CODES  = new Set(['10', '8', '101']);
+const ENTRY_CODES  = new Set(['10', '8', '101', '11']);
 const EXIT_CODES   = new Set(['53', '5', '9']);
 const ALARM_CODES  = new Set(['1', '4', '7', '55', '58']);
-const ACCESS_CODES = new Set(['11', '22', '23', '100', '300']);
+const ACCESS_CODES = new Set(['22', '23', '100', '300']);
 const STATUS_CODES = new Set(['301', '302']);
 
+// For code-11 events the terminal emits no user — backfill from the preceding
+// "Identified" event on the same door within a 30-second window.
+function enrichEvents(events) {
+  return events.map((evt, idx) => {
+    const code = (evt.event_data || '').trim();
+    const t    = (evt.event_type  || '').trim();
+    if ((code !== '11' && t !== '11') || evt.ingress_user_id) return evt;
+
+    const evtMs = new Date(evt.event_time || evt.created_at).getTime();
+    const start = Math.max(0, idx - 10);
+    const end   = Math.min(events.length, idx + 10);
+
+    for (let i = start; i < end; i++) {
+      if (i === idx) continue;
+      const other    = events[i];
+      const otherMs  = new Date(other.event_time || other.created_at).getTime();
+      const otherType = (other.event_type || '').trim().toLowerCase();
+      if (
+        other.door_name === evt.door_name &&
+        Math.abs(otherMs - evtMs) <= 30000 &&
+        otherType.includes('identif') &&
+        other.ingress_user_id
+      ) {
+        return { ...evt, ingress_user_id: other.ingress_user_id };
+      }
+    }
+    return evt;
+  });
+}
+
 function classifyEvent(eventType, eventData) {
-  const code = (eventData || '').trim();
-  const t    = (eventType || '').trim();
-  const key  = code || t;
+  const code  = (eventData || '').trim();
+  const t     = (eventType || '').trim();
+  const key   = code || t;
   if (ENTRY_CODES.has(key))  return 'entry';
   if (EXIT_CODES.has(key))   return 'exit';
   if (ALARM_CODES.has(key))  return 'alarm';
   if (ACCESS_CODES.has(key)) return 'access';
   if (STATUS_CODES.has(key)) return 'status';
   const lower = t.toLowerCase();
+  // "Identified" = terminal recognised the user → successful entry
+  if (lower.includes('identif')) return 'entry';
   if (lower.includes('open') || lower.includes('unlock')) return 'entry';
   if (lower.includes('close') || lower.includes('lock'))  return 'exit';
   if (lower.includes('alarm') || lower.includes('accidental')) return 'alarm';
@@ -233,7 +265,7 @@ export default function ActivityLogScreen({ route, navigation }) {
   const loadEvents = useCallback(async () => {
     try {
       const events = await api.getEvents(door?.id, 200);
-      setSections(groupByDate(events));
+      setSections(groupByDate(enrichEvents(events)));
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {
