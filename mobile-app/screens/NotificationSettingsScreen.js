@@ -55,7 +55,12 @@ export default function NotificationSettingsScreen({ route, navigation }) {
       const prefs = await api.getNotificationPreferences();
       const pref = prefs.find(p => p.door_id === door.id);
       if (pref?.notify_event_types) {
-        setEnabledCodes(pref.notify_event_types);
+        // Server stores as comma-separated string: "10,8,101"
+        const raw = pref.notify_event_types;
+        const parsed = typeof raw === 'string'
+          ? raw.split(',').map(c => c.trim()).filter(Boolean)
+          : (Array.isArray(raw) ? raw : []);
+        setEnabledCodes(parsed);
       } else if (pref?.notify_on_open || pref?.notify_on_close || pref?.notify_on_forced) {
         const codes = [];
         if (pref.notify_on_open) codes.push('10', '8', '101');
@@ -88,7 +93,8 @@ export default function NotificationSettingsScreen({ route, navigation }) {
         enabledCodes.some(c => ['10', '8', '101'].includes(c)),
         enabledCodes.some(c => ['5', '9', '53'].includes(c)),
         enabledCodes.some(c => ['1', '4', '7'].includes(c)),
-        enabledCodes,
+        // Server expects comma-separated string, not array
+        enabledCodes.join(','),
       );
       Alert.alert('Saved', 'Notification settings updated.', [
         { text: 'OK', onPress: () => navigation.goBack() },
