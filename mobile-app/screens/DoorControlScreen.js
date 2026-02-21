@@ -11,6 +11,7 @@ import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRootNavigation } from '../contexts/RootNavigationContext';
+import useResponsive from '../hooks/useResponsive';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -18,6 +19,11 @@ export default function DoorControlScreen({ route, navigation }) {
   const { colors } = useTheme();
   const { resetToLogin } = useRootNavigation();
   const insets = useSafeAreaInsets();
+  const { 
+    scaleFont, spacing, iconSize, 
+    isSmallPhone, isVerySmallPhone, isTablet,
+    width: screenWidth
+  } = useResponsive();
   const { door } = route.params;
 
   const [loading, setLoading] = useState(false);
@@ -166,6 +172,13 @@ export default function DoorControlScreen({ route, navigation }) {
   const unlocked = status === 'Unlocked';
   const btnColor = unlocked ? colors.success : colors.primary;
 
+  // Responsive sizing
+  const BTN_SIZE = isVerySmallPhone ? 140 : isSmallPhone ? 155 : isTablet ? 200 : 172;
+  const RING_SIZE = BTN_SIZE + 40;
+  const lockIconSize = isVerySmallPhone ? 34 : isSmallPhone ? 38 : isTablet ? 50 : 42;
+  const headerIconSize = iconSize(20);
+  const actionIconSize = iconSize(19);
+
   return (
     <Animated.View
       style={[
@@ -182,15 +195,21 @@ export default function DoorControlScreen({ route, navigation }) {
         </View>
 
         {/* ── Header ── */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingHorizontal: spacing(12) }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-            <X size={20} color={colors.textSecondary} strokeWidth={2} />
+            <X size={headerIconSize} color={colors.textSecondary} strokeWidth={2} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={[styles.doorName, { color: colors.textPrimary }]} numberOfLines={1}>
+            <Text style={[styles.doorName, { 
+              color: colors.textPrimary,
+              fontSize: scaleFont(17),
+            }]} numberOfLines={1}>
               {door.name}
             </Text>
-            <Text style={[styles.doorIp, { color: colors.textTertiary }]}>
+            <Text style={[styles.doorIp, { 
+              color: colors.textTertiary,
+              fontSize: scaleFont(12),
+            }]}>
               {door.terminal_ip}
             </Text>
           </View>
@@ -199,16 +218,23 @@ export default function DoorControlScreen({ route, navigation }) {
             onPress={() => navigation.navigate('NotificationSettings', { door })}
           >
             {notifyEnabled
-              ? <Bell size={20} color={colors.primary} strokeWidth={2} />
-              : <BellOff size={20} color={colors.textTertiary} strokeWidth={2} />
+              ? <Bell size={headerIconSize} color={colors.primary} strokeWidth={2} />
+              : <BellOff size={headerIconSize} color={colors.textTertiary} strokeWidth={2} />
             }
           </TouchableOpacity>
         </View>
 
         {/* License warning */}
         {isExpired && (
-          <View style={[styles.licenseBanner, { backgroundColor: colors.dangerDim, borderColor: colors.danger }]}>
-            <Text style={[styles.licenseText, { color: colors.danger }]}>
+          <View style={[styles.licenseBanner, { 
+            backgroundColor: colors.dangerDim, 
+            borderColor: colors.danger,
+            marginHorizontal: spacing(16),
+          }]}>
+            <Text style={[styles.licenseText, { 
+              color: colors.danger,
+              fontSize: scaleFont(12),
+            }]}>
               {licenseStatus.status === 'grace' ? 'License expiring soon' : 'License expired'}
               {' — '}sales@urzis.com
             </Text>
@@ -227,6 +253,9 @@ export default function DoorControlScreen({ route, navigation }) {
             style={[
               styles.glowRing,
               {
+                width: RING_SIZE,
+                height: RING_SIZE,
+                borderRadius: RING_SIZE / 2,
                 borderColor: `${btnColor}28`,
                 transform: [{ scale: pulseAnim }],
               },
@@ -238,6 +267,9 @@ export default function DoorControlScreen({ route, navigation }) {
             style={[
               styles.unlockBtn,
               {
+                width: BTN_SIZE,
+                height: BTN_SIZE,
+                borderRadius: BTN_SIZE / 2,
                 backgroundColor: btnColor,
                 shadowColor: btnColor,
                 opacity: loading ? 0.75 : 1,
@@ -252,10 +284,10 @@ export default function DoorControlScreen({ route, navigation }) {
             ) : (
               <>
                 {unlocked
-                  ? <Unlock size={42} color="#000" strokeWidth={2} />
-                  : <Lock size={42} color="#000" strokeWidth={2} />
+                  ? <Unlock size={lockIconSize} color="#000" strokeWidth={2} />
+                  : <Lock size={lockIconSize} color="#000" strokeWidth={2} />
                 }
-                <Text style={styles.unlockLabel}>
+                <Text style={[styles.unlockLabel, { fontSize: scaleFont(14) }]}>
                   {unlocked ? 'Unlocked' : 'Tap to Unlock'}
                 </Text>
               </>
@@ -265,13 +297,20 @@ export default function DoorControlScreen({ route, navigation }) {
           {/* Lock now button */}
           {unlocked && (
             <TouchableOpacity
-              style={[styles.lockNowBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+              style={[styles.lockNowBtn, { 
+                borderColor: colors.border, 
+                backgroundColor: colors.card,
+                marginTop: spacing(24),
+              }]}
               onPress={closeDoor}
               disabled={loading}
               activeOpacity={0.7}
             >
-              <Lock size={15} color={colors.textSecondary} strokeWidth={2} />
-              <Text style={[styles.lockNowText, { color: colors.textSecondary }]}>Lock now</Text>
+              <Lock size={iconSize(15)} color={colors.textSecondary} strokeWidth={2} />
+              <Text style={[styles.lockNowText, { 
+                color: colors.textSecondary,
+                fontSize: scaleFont(14),
+              }]}>Lock now</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -280,15 +319,19 @@ export default function DoorControlScreen({ route, navigation }) {
         <View style={[styles.actionsBar, {
           backgroundColor: colors.card,
           borderColor: colors.border,
-          marginBottom: insets.bottom + 12,
+          marginBottom: Math.max(insets.bottom, 12) + 12,
+          marginHorizontal: spacing(16),
         }]}>
           <TouchableOpacity
             style={styles.action}
             onPress={() => navigation.navigate('ActivityLog', { door })}
             activeOpacity={0.7}
           >
-            <Activity size={19} color={colors.primary} strokeWidth={2} />
-            <Text style={[styles.actionLabel, { color: colors.textPrimary }]}>Activity</Text>
+            <Activity size={actionIconSize} color={colors.primary} strokeWidth={2} />
+            <Text style={[styles.actionLabel, { 
+              color: colors.textPrimary,
+              fontSize: scaleFont(15),
+            }]}>Activity</Text>
           </TouchableOpacity>
           <View style={[styles.actionDivider, { backgroundColor: colors.border }]} />
           <TouchableOpacity
@@ -296,8 +339,11 @@ export default function DoorControlScreen({ route, navigation }) {
             onPress={() => navigation.navigate('NotificationSettings', { door })}
             activeOpacity={0.7}
           >
-            <Bell size={19} color={colors.primary} strokeWidth={2} />
-            <Text style={[styles.actionLabel, { color: colors.textPrimary }]}>Notifications</Text>
+            <Bell size={actionIconSize} color={colors.primary} strokeWidth={2} />
+            <Text style={[styles.actionLabel, { 
+              color: colors.textPrimary,
+              fontSize: scaleFont(15),
+            }]}>Notifications</Text>
           </TouchableOpacity>
         </View>
 
@@ -305,9 +351,6 @@ export default function DoorControlScreen({ route, navigation }) {
     </Animated.View>
   );
 }
-
-const BTN_SIZE = 172;
-const RING_SIZE = BTN_SIZE + 40;
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
@@ -326,7 +369,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
     paddingVertical: 8,
   },
   iconBtn: {
@@ -340,23 +382,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   doorName: {
-    fontSize: 17,
     fontWeight: '600',
     letterSpacing: -0.2,
   },
   doorIp: {
-    fontSize: 12,
     marginTop: 1,
   },
   licenseBanner: {
-    marginHorizontal: 16,
     marginTop: 4,
     padding: 10,
     borderRadius: 10,
     borderWidth: 1,
   },
   licenseText: {
-    fontSize: 12,
     fontWeight: '500',
     textAlign: 'center',
   },
@@ -372,15 +410,9 @@ const styles = StyleSheet.create({
   },
   glowRing: {
     position: 'absolute',
-    width: RING_SIZE,
-    height: RING_SIZE,
-    borderRadius: RING_SIZE / 2,
     borderWidth: 14,
   },
   unlockBtn: {
-    width: BTN_SIZE,
-    height: BTN_SIZE,
-    borderRadius: BTN_SIZE / 2,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 10,
@@ -390,7 +422,6 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   unlockLabel: {
-    fontSize: 14,
     fontWeight: '700',
     color: '#000',
     letterSpacing: 0.2,
@@ -399,19 +430,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 24,
     paddingHorizontal: 22,
     paddingVertical: 11,
     borderRadius: 24,
     borderWidth: 1,
   },
   lockNowText: {
-    fontSize: 14,
     fontWeight: '500',
   },
   actionsBar: {
     flexDirection: 'row',
-    marginHorizontal: 16,
     borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
@@ -430,7 +458,6 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   actionLabel: {
-    fontSize: 15,
     fontWeight: '500',
   },
 });
