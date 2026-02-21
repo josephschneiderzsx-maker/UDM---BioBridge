@@ -1,4 +1,4 @@
-# Visual Studio
+# Visual Studio / .NET
 .vs/
 *.user
 *.suo
@@ -6,8 +6,6 @@
 *.sln.docstates
 bin/
 obj/
-*.exe
-*.dll
 *.pdb
 
 # Build results
@@ -23,33 +21,47 @@ x86/
 packages/
 *.nupkg
 
-# Node modules (mobile app)
+# Node
 node_modules/
-npm-debug.log
+npm-debug.log*
 
 # OS
 .DS_Store
 Thumbs.db
-nul
 
-# Livrables UDM : on versionne SERVER et AGENT sur GitHub
+# Environment
+*.env
+*.env.*
+
+# Expo / React Native - generated caches and build artifacts
+mobile-app/.expo/
+mobile-app-compact/.expo/
+mobile-app/android/build/
+mobile-app/android/app/build/
+mobile-app-compact/android/build/
+mobile-app-compact/android/app/build/
+
+# Large zip/archive files
+*.zip
+*.tar.gz
+*.rar
+
+# Icon generator output (keep only final assets)
+mobile-app/urzis-pass-icon/
+
+# Duplicate compact app (dev artifact, not needed in main repo)
+mobile-app-compact/
+
+# Executables and DLLs (except the UDM server/agent releases)
+*.exe
+*.dll
+!UDM/SERVER/*.exe
+!UDM/SERVER/*.dll
+!UDM/AGENT/*.exe
+!UDM/AGENT/*.dll
+
+# Livrables UDM
 !UDM/SERVER/
 !UDM/SERVER/**
 !UDM/AGENT/
 !UDM/AGENT/**
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*

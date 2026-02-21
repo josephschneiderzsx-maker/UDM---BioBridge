@@ -37,7 +37,10 @@
       "Bash(npx expo install:*)",
       "Bash(npm install:*)",
       "Bash(git checkout:*)",
-      "Bash(npm audit:*)"
+      "Bash(npm audit:*)",
+      "Bash(git push:*)",
+      "Bash(./gradlew:*)",
+      "Bash(taskkill:*)"
     ]
   }
 }
