@@ -389,8 +389,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: spacing(16),
+    paddingVertical: spacing(12),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backBtn: { width: 40, padding: 4 },
