@@ -479,7 +479,7 @@ const mStyles = StyleSheet.create({
     width: 30, height: 30, borderRadius: 15,
     justifyContent: 'center', alignItems: 'center',
   },
-  userNameText: { fontSize: 15, fontWeight: '700', letterSpacing: -0.2 },
+  userNameText: { fontWeight: '700', letterSpacing: -0.2 },
   eventHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -491,7 +491,7 @@ const mStyles = StyleSheet.create({
     width: 52, height: 52, borderRadius: 14,
     justifyContent: 'center', alignItems: 'center',
   },
-  eventTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.3, marginBottom: 4 },
+  eventTitle: { fontWeight: '700', letterSpacing: -0.3, marginBottom: 4 },
   codePill: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3,
