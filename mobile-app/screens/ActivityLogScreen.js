@@ -256,6 +256,7 @@ function EventDetailModal({ event, colors, onClose }) {
 
 export default function ActivityLogScreen({ route, navigation }) {
   const { colors } = useTheme();
+  const { scaleFont, spacing } = useResponsive();
   const door = route?.params?.door || null;
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
