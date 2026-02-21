@@ -9,7 +9,7 @@ import {
   ShieldX, Activity, Wifi, WifiOff, X, User, DoorOpen,
   Hash, Calendar, Clock, Info, Shield,
 } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+// Haptics removed - only used for important actions (door unlock)
 import api from '../services/api';
 import { ActivitySkeleton } from '../components/SkeletonLoader';
 import { useTheme } from '../contexts/ThemeContext';
@@ -154,8 +154,7 @@ function EventDetailModal({ event, colors, onClose }) {
   const hasUser  = !!event.ingress_user_id;
   const source   = event.source === 'ingress' ? 'Access Control' : event.source || 'System';
 
-  const handleClose = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const handleClose = () => {
     onClose();
   };
 
