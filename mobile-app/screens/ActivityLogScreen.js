@@ -128,7 +128,7 @@ function formatFullDate(ts) {
 
 // ─── Event Detail Bottom Sheet ────────────────────────────────────────────────
 
-function DetailRow({ IconComp, iconColor, label, value, colors }) {
+function DetailRow({ IconComp, iconColor, label, value, colors, scaleFont }) {
   return (
     <View style={[mStyles.detailRow, { borderBottomColor: colors.separator }]}>
       <View style={mStyles.detailLeft}>
@@ -137,9 +137,9 @@ function DetailRow({ IconComp, iconColor, label, value, colors }) {
             <IconComp size={13} color={iconColor || colors.textTertiary} strokeWidth={2} />
           </View>
         )}
-        <Text style={[mStyles.detailLabel, { color: colors.textTertiary }]}>{label}</Text>
+        <Text style={[mStyles.detailLabel, { color: colors.textTertiary, fontSize: scaleFont(13) }]}>{label}</Text>
       </View>
-      <Text style={[mStyles.detailValue, { color: colors.textPrimary }]}>{value}</Text>
+      <Text style={[mStyles.detailValue, { color: colors.textPrimary, fontSize: scaleFont(13) }]}>{value}</Text>
     </View>
   );
 }
