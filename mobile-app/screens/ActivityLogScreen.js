@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
   rowInfo: { flex: 1, marginRight: 8 },
   eventLabel: { fontSize: scaleFont(14), fontWeight: '500', marginBottom: 2 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 12 },
+  metaText: { fontSize: scaleFont(12) },
   metaDot: { width: 3, height: 3, borderRadius: 1.5 },
   metaUser: { fontSize: 12, fontWeight: '600' },
   timeText: { fontSize: 11, fontWeight: '500' },
