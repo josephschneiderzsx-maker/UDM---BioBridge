@@ -13,6 +13,7 @@ import {
 import api from '../services/api';
 import { ActivitySkeleton } from '../components/SkeletonLoader';
 import { useTheme } from '../contexts/ThemeContext';
+import useResponsive from '../hooks/useResponsive';
 
 // ─── Event classification (mirrors old server data structure) ─────────────────
 
