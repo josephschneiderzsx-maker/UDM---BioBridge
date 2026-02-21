@@ -400,12 +400,12 @@ const styles = StyleSheet.create({
   content: { paddingBottom: spacing(32) },
   emptyContent: { flex: 1, justifyContent: 'center' },
   sectionHeader: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 4,
+    paddingHorizontal: spacing(16),
+    paddingTop: spacing(14),
+    paddingBottom: spacing(4),
   },
   dateHeader: {
-    fontSize: 11,
+    fontSize: scaleFont(11),
     fontWeight: '700',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
@@ -413,8 +413,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 13,
+    paddingHorizontal: spacing(16),
+    paddingVertical: spacing(13),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   iconBox: {
