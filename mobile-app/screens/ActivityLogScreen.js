@@ -500,8 +500,8 @@ const mStyles = StyleSheet.create({
   codeText: { fontWeight: '600' },
   closeBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
   detailsBox: {
-    marginHorizontal: 16, borderRadius: 14, borderWidth: 1,
-    overflow: 'hidden', marginBottom: 8,
+    borderRadius: 14, borderWidth: 1,
+    overflow: 'hidden',
   },
   detailRow: {
     flexDirection: 'row', alignItems: 'center',
