@@ -497,7 +497,7 @@ const mStyles = StyleSheet.create({
     alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3,
     borderRadius: 999, borderWidth: 1,
   },
-  codeText: { fontSize: 11, fontWeight: '600' },
+  codeText: { fontWeight: '600' },
   closeBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
   detailsBox: {
     marginHorizontal: 16, borderRadius: 14, borderWidth: 1,
