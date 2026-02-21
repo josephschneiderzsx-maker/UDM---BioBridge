@@ -207,7 +207,12 @@ function EventDetailModal({ event, colors, onClose }) {
           </View>
 
           {/* ── Detail rows ── */}
-          <View style={[mStyles.detailsBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[mStyles.detailsBox, { 
+            backgroundColor: colors.surface, 
+            borderColor: colors.border,
+            marginHorizontal: spacing(16),
+            marginBottom: spacing(8),
+          }]}>
             <DetailRow
               IconComp={Calendar}
               label="Date & Time"
