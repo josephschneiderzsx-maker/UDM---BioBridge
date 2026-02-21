@@ -193,10 +193,10 @@ function EventDetailModal({ event, colors, onClose }) {
               <Icon size={28} color={iconColor} strokeWidth={2} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[mStyles.eventTitle, { color: colors.textPrimary }]}>{label}</Text>
+              <Text style={[mStyles.eventTitle, { color: colors.textPrimary, fontSize: scaleFont(17) }]}>{label}</Text>
               <View style={[mStyles.codePill, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Hash size={10} color={colors.textTertiary} strokeWidth={2} />
-                <Text style={[mStyles.codeText, { color: colors.textTertiary }]}>
+                <Text style={[mStyles.codeText, { color: colors.textTertiary, fontSize: scaleFont(11) }]}>
                   {(event.event_data || '').trim() || (event.event_type || '').trim()}
                 </Text>
               </View>
