@@ -515,6 +515,6 @@ const mStyles = StyleSheet.create({
     width: 26, height: 26, borderRadius: 6,
     justifyContent: 'center', alignItems: 'center',
   },
-  detailLabel: { fontSize: 13, fontWeight: '500' },
-  detailValue: { fontSize: 13, fontWeight: '600', textAlign: 'right', flex: 1 },
+  detailLabel: { fontWeight: '500' },
+  detailValue: { fontWeight: '600', textAlign: 'right', flex: 1 },
 });
