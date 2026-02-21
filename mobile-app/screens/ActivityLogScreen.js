@@ -181,7 +181,7 @@ function EventDetailModal({ event, colors, onClose }) {
               <View style={[mStyles.userAvatarBox, { backgroundColor: colors.primary }]}>
                 <User size={15} color="#000" strokeWidth={2.5} />
               </View>
-              <Text style={[mStyles.userNameText, { color: colors.primary }]}>
+              <Text style={[mStyles.userNameText, { color: colors.primary, fontSize: scaleFont(15) }]}>
                 {event.ingress_user_id}
               </Text>
             </View>
