@@ -430,11 +430,11 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { fontSize: scaleFont(12) },
   metaDot: { width: 3, height: 3, borderRadius: 1.5 },
-  metaUser: { fontSize: 12, fontWeight: '600' },
-  timeText: { fontSize: 11, fontWeight: '500' },
-  empty: { alignItems: 'center', paddingVertical: 64, gap: 12 },
-  emptyTitle: { fontSize: 17, fontWeight: '600' },
-  emptyText: { fontSize: 14, textAlign: 'center' },
+  metaUser: { fontSize: scaleFont(12), fontWeight: '600' },
+  timeText: { fontSize: scaleFont(11), fontWeight: '500' },
+  empty: { alignItems: 'center', paddingVertical: spacing(64), gap: spacing(12) },
+  emptyTitle: { fontSize: scaleFont(17), fontWeight: '600' },
+  emptyText: { fontSize: scaleFont(14), textAlign: 'center' },
 });
 
 const mStyles = StyleSheet.create({
