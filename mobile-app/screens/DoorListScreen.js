@@ -3,7 +3,7 @@ import {
   View, Text, FlatList, StyleSheet, Alert, TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Radio, Sun, Moon } from 'lucide-react-native';
 import api from '../services/api';
 import DoorCard from '../components/DoorCard';
@@ -11,10 +11,17 @@ import { SkeletonList } from '../components/SkeletonLoader';
 import Logo from '../components/Logo';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRootNavigation } from '../contexts/RootNavigationContext';
+import useResponsive from '../hooks/useResponsive';
 
 export default function DoorListScreen({ navigation }) {
   const { colors, isDark, toggleTheme } = useTheme();
   const { resetToLogin } = useRootNavigation();
+  const insets = useSafeAreaInsets();
+  const { 
+    scaleFont, spacing, iconSize, tabBarPadding,
+    isSmallPhone, isVerySmallPhone, isTablet, contentMaxWidth 
+  } = useResponsive();
+  
   const [doors, setDoors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -94,12 +101,21 @@ export default function DoorListScreen({ navigation }) {
 
   const quotaAtLimit = quota && quota.used >= quota.quota;
 
+  const logoWidth = isVerySmallPhone ? 90 : isSmallPhone ? 100 : isTablet ? 140 : 110;
+  const themeIconSize = iconSize(20);
+  const radioIconSize = iconSize(13);
+  const contentPadding = spacing(16);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.separator }]}>
+      <View style={[styles.header, { 
+        borderBottomColor: colors.separator,
+        paddingHorizontal: contentPadding,
+        paddingVertical: spacing(12),
+      }]}>
         <View style={styles.logoWrap}>
-          <Logo width={110} />
+          <Logo width={logoWidth} />
           {quota && (
             <View style={[
               styles.quotaBadge,
@@ -107,7 +123,10 @@ export default function DoorListScreen({ navigation }) {
             ]}>
               <Text style={[
                 styles.quotaText,
-                { color: quotaAtLimit ? colors.danger : colors.primary },
+                { 
+                  color: quotaAtLimit ? colors.danger : colors.primary,
+                  fontSize: scaleFont(11),
+                },
               ]}>
                 {quota.used}/{quota.quota}
               </Text>
@@ -120,14 +139,14 @@ export default function DoorListScreen({ navigation }) {
               style={[styles.pendingBadge, { backgroundColor: colors.warning }]}
               onPress={() => navigation.navigate('DiscoveredDevices')}
             >
-              <Radio size={13} color="#000" strokeWidth={2.5} />
-              <Text style={styles.pendingText}>{pendingCount}</Text>
+              <Radio size={radioIconSize} color="#000" strokeWidth={2.5} />
+              <Text style={[styles.pendingText, { fontSize: scaleFont(12) }]}>{pendingCount}</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity onPress={toggleTheme} style={styles.iconBtn}>
             {isDark
-              ? <Sun size={20} color={colors.textSecondary} strokeWidth={2} />
-              : <Moon size={20} color={colors.textSecondary} strokeWidth={2} />
+              ? <Sun size={themeIconSize} color={colors.textSecondary} strokeWidth={2} />
+              : <Moon size={themeIconSize} color={colors.textSecondary} strokeWidth={2} />
             }
           </TouchableOpacity>
         </View>
@@ -135,7 +154,7 @@ export default function DoorListScreen({ navigation }) {
 
       {/* List */}
       {loading ? (
-        <View style={styles.content}>
+        <View style={[styles.content, { padding: contentPadding }]}>
           <SkeletonList count={4} />
         </View>
       ) : (
@@ -144,6 +163,13 @@ export default function DoorListScreen({ navigation }) {
           keyExtractor={item => String(item.id)}
           contentContainerStyle={[
             styles.content,
+            { 
+              padding: contentPadding,
+              paddingBottom: tabBarPadding(),
+              maxWidth: contentMaxWidth(),
+              alignSelf: 'center',
+              width: '100%',
+            },
             doors.length === 0 && styles.emptyContent,
           ]}
           refreshControl={
@@ -162,8 +188,16 @@ export default function DoorListScreen({ navigation }) {
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No doors yet</Text>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              <Text style={[styles.emptyTitle, { 
+                color: colors.textPrimary,
+                fontSize: scaleFont(17),
+              }]}>
+                No doors yet
+              </Text>
+              <Text style={[styles.emptyText, { 
+                color: colors.textSecondary,
+                fontSize: scaleFont(14),
+              }]}>
                 Add your first door from the Add tab.
               </Text>
             </View>
@@ -180,8 +214,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   logoWrap: {
@@ -195,7 +227,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   quotaText: {
-    fontSize: 11,
     fontWeight: '700',
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -207,11 +238,11 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     gap: 4,
   },
-  pendingText: { fontSize: 12, fontWeight: '700', color: '#000' },
+  pendingText: { fontWeight: '700', color: '#000' },
   iconBtn: { padding: 4 },
-  content: { padding: 16 },
+  content: {},
   emptyContent: { flex: 1, justifyContent: 'center' },
   empty: { alignItems: 'center', paddingVertical: 48 },
-  emptyTitle: { fontSize: 17, fontWeight: '600', marginBottom: 8 },
-  emptyText: { fontSize: 14, textAlign: 'center' },
+  emptyTitle: { fontWeight: '600', marginBottom: 8 },
+  emptyText: { textAlign: 'center' },
 });

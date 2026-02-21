@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import useResponsive from '../hooks/useResponsive';
 
 export default function StatusBadge({ status }) {
   const { colors } = useTheme();
+  const { scaleFont, spacing } = useResponsive();
   const isUnlocked = status === 'Unlocked';
 
   const color = isUnlocked ? colors.success : colors.textSecondary;
@@ -29,7 +31,11 @@ export default function StatusBadge({ status }) {
   }, [isUnlocked]);
 
   return (
-    <View style={[styles.badge, { backgroundColor: bg }]}>
+    <View style={[styles.badge, { 
+      backgroundColor: bg,
+      paddingHorizontal: spacing(12),
+      paddingVertical: spacing(6),
+    }]}>
       <View style={styles.dotWrap}>
         {isUnlocked && (
           <Animated.View
@@ -41,7 +47,10 @@ export default function StatusBadge({ status }) {
         )}
         <View style={[styles.dot, { backgroundColor: color }]} />
       </View>
-      <Text style={[styles.text, { color }]}>{status || 'Secured'}</Text>
+      <Text style={[styles.text, { 
+        color,
+        fontSize: scaleFont(13),
+      }]}>{status || 'Secured'}</Text>
     </View>
   );
 }
@@ -50,8 +59,6 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
     borderRadius: 999,
     alignSelf: 'center',
     gap: 7,
@@ -73,5 +80,5 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 4,
   },
-  text: { fontSize: 13, fontWeight: '600' },
+  text: { fontWeight: '600' },
 });

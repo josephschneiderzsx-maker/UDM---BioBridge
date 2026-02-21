@@ -9,10 +9,11 @@ import {
   ShieldX, Activity, Wifi, WifiOff, X, User, DoorOpen,
   Hash, Calendar, Clock, Info, Shield,
 } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+// Haptics removed - only used for important actions (door unlock)
 import api from '../services/api';
 import { ActivitySkeleton } from '../components/SkeletonLoader';
 import { useTheme } from '../contexts/ThemeContext';
+import useResponsive from '../hooks/useResponsive';
 
 // ─── Event classification (mirrors old server data structure) ─────────────────
 
@@ -127,7 +128,7 @@ function formatFullDate(ts) {
 
 // ─── Event Detail Bottom Sheet ────────────────────────────────────────────────
 
-function DetailRow({ IconComp, iconColor, label, value, colors }) {
+function DetailRow({ IconComp, iconColor, label, value, colors, scaleFont }) {
   return (
     <View style={[mStyles.detailRow, { borderBottomColor: colors.separator }]}>
       <View style={mStyles.detailLeft}>
@@ -136,15 +137,16 @@ function DetailRow({ IconComp, iconColor, label, value, colors }) {
             <IconComp size={13} color={iconColor || colors.textTertiary} strokeWidth={2} />
           </View>
         )}
-        <Text style={[mStyles.detailLabel, { color: colors.textTertiary }]}>{label}</Text>
+        <Text style={[mStyles.detailLabel, { color: colors.textTertiary, fontSize: scaleFont(13) }]}>{label}</Text>
       </View>
-      <Text style={[mStyles.detailValue, { color: colors.textPrimary }]}>{value}</Text>
+      <Text style={[mStyles.detailValue, { color: colors.textPrimary, fontSize: scaleFont(13) }]}>{value}</Text>
     </View>
   );
 }
 
 function EventDetailModal({ event, colors, onClose }) {
   const insets = useSafeAreaInsets();
+  const { scaleFont, spacing } = useResponsive();
   if (!event) return null;
 
   const ts       = event.event_time || event.created_at;
@@ -154,8 +156,7 @@ function EventDetailModal({ event, colors, onClose }) {
   const hasUser  = !!event.ingress_user_id;
   const source   = event.source === 'ingress' ? 'Access Control' : event.source || 'System';
 
-  const handleClose = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const handleClose = () => {
     onClose();
   };
 
@@ -180,7 +181,7 @@ function EventDetailModal({ event, colors, onClose }) {
               <View style={[mStyles.userAvatarBox, { backgroundColor: colors.primary }]}>
                 <User size={15} color="#000" strokeWidth={2.5} />
               </View>
-              <Text style={[mStyles.userNameText, { color: colors.primary }]}>
+              <Text style={[mStyles.userNameText, { color: colors.primary, fontSize: scaleFont(15) }]}>
                 {event.ingress_user_id}
               </Text>
             </View>
@@ -192,10 +193,10 @@ function EventDetailModal({ event, colors, onClose }) {
               <Icon size={28} color={iconColor} strokeWidth={2} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[mStyles.eventTitle, { color: colors.textPrimary }]}>{label}</Text>
+              <Text style={[mStyles.eventTitle, { color: colors.textPrimary, fontSize: scaleFont(17) }]}>{label}</Text>
               <View style={[mStyles.codePill, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Hash size={10} color={colors.textTertiary} strokeWidth={2} />
-                <Text style={[mStyles.codeText, { color: colors.textTertiary }]}>
+                <Text style={[mStyles.codeText, { color: colors.textTertiary, fontSize: scaleFont(11) }]}>
                   {(event.event_data || '').trim() || (event.event_type || '').trim()}
                 </Text>
               </View>
@@ -206,12 +207,18 @@ function EventDetailModal({ event, colors, onClose }) {
           </View>
 
           {/* ── Detail rows ── */}
-          <View style={[mStyles.detailsBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[mStyles.detailsBox, { 
+            backgroundColor: colors.surface, 
+            borderColor: colors.border,
+            marginHorizontal: spacing(16),
+            marginBottom: spacing(8),
+          }]}>
             <DetailRow
               IconComp={Calendar}
               label="Date & Time"
               value={formatFullDate(ts)}
               colors={colors}
+              scaleFont={scaleFont}
             />
             {event.door_name && (
               <DetailRow
@@ -220,6 +227,7 @@ function EventDetailModal({ event, colors, onClose }) {
                 label="Door"
                 value={event.door_name}
                 colors={colors}
+                scaleFont={scaleFont}
               />
             )}
             {hasUser && (
@@ -229,6 +237,7 @@ function EventDetailModal({ event, colors, onClose }) {
                 label="User"
                 value={event.ingress_user_id}
                 colors={colors}
+                scaleFont={scaleFont}
               />
             )}
             {event.event_data && (
@@ -237,6 +246,7 @@ function EventDetailModal({ event, colors, onClose }) {
                 label="Event Code"
                 value={event.event_data}
                 colors={colors}
+                scaleFont={scaleFont}
               />
             )}
             <DetailRow
@@ -244,6 +254,7 @@ function EventDetailModal({ event, colors, onClose }) {
               label="Source"
               value={source}
               colors={colors}
+              scaleFont={scaleFont}
             />
           </View>
         </View>
@@ -256,6 +267,7 @@ function EventDetailModal({ event, colors, onClose }) {
 
 export default function ActivityLogScreen({ route, navigation }) {
   const { colors } = useTheme();
+  const { scaleFont, spacing } = useResponsive();
   const door = route?.params?.door || null;
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -388,23 +400,23 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: spacing(16),
+    paddingVertical: spacing(12),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backBtn: { width: 40, padding: 4 },
   headerCenter: { flex: 1, alignItems: 'center' },
-  title: { fontSize: 17, fontWeight: '600' },
-  subtitle: { fontSize: 12, marginTop: 1 },
-  content: { paddingBottom: 32 },
+  title: { fontSize: scaleFont(17), fontWeight: '600' },
+  subtitle: { fontSize: scaleFont(12), marginTop: 1 },
+  content: { paddingBottom: spacing(32) },
   emptyContent: { flex: 1, justifyContent: 'center' },
   sectionHeader: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 4,
+    paddingHorizontal: spacing(16),
+    paddingTop: spacing(14),
+    paddingBottom: spacing(4),
   },
   dateHeader: {
-    fontSize: 11,
+    fontSize: scaleFont(11),
     fontWeight: '700',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
@@ -412,8 +424,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 13,
+    paddingHorizontal: spacing(16),
+    paddingVertical: spacing(13),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   iconBox: {
@@ -425,15 +437,15 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   rowInfo: { flex: 1, marginRight: 8 },
-  eventLabel: { fontSize: 14, fontWeight: '500', marginBottom: 2 },
+  eventLabel: { fontSize: scaleFont(14), fontWeight: '500', marginBottom: 2 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 12 },
+  metaText: { fontSize: scaleFont(12) },
   metaDot: { width: 3, height: 3, borderRadius: 1.5 },
-  metaUser: { fontSize: 12, fontWeight: '600' },
-  timeText: { fontSize: 11, fontWeight: '500' },
-  empty: { alignItems: 'center', paddingVertical: 64, gap: 12 },
-  emptyTitle: { fontSize: 17, fontWeight: '600' },
-  emptyText: { fontSize: 14, textAlign: 'center' },
+  metaUser: { fontSize: scaleFont(12), fontWeight: '600' },
+  timeText: { fontSize: scaleFont(11), fontWeight: '500' },
+  empty: { alignItems: 'center', paddingVertical: spacing(64), gap: spacing(12) },
+  emptyTitle: { fontSize: scaleFont(17), fontWeight: '600' },
+  emptyText: { fontSize: scaleFont(14), textAlign: 'center' },
 });
 
 const mStyles = StyleSheet.create({
@@ -467,7 +479,7 @@ const mStyles = StyleSheet.create({
     width: 30, height: 30, borderRadius: 15,
     justifyContent: 'center', alignItems: 'center',
   },
-  userNameText: { fontSize: 15, fontWeight: '700', letterSpacing: -0.2 },
+  userNameText: { fontWeight: '700', letterSpacing: -0.2 },
   eventHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -479,17 +491,17 @@ const mStyles = StyleSheet.create({
     width: 52, height: 52, borderRadius: 14,
     justifyContent: 'center', alignItems: 'center',
   },
-  eventTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.3, marginBottom: 4 },
+  eventTitle: { fontWeight: '700', letterSpacing: -0.3, marginBottom: 4 },
   codePill: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3,
     borderRadius: 999, borderWidth: 1,
   },
-  codeText: { fontSize: 11, fontWeight: '600' },
+  codeText: { fontWeight: '600' },
   closeBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
   detailsBox: {
-    marginHorizontal: 16, borderRadius: 14, borderWidth: 1,
-    overflow: 'hidden', marginBottom: 8,
+    borderRadius: 14, borderWidth: 1,
+    overflow: 'hidden',
   },
   detailRow: {
     flexDirection: 'row', alignItems: 'center',
@@ -503,6 +515,6 @@ const mStyles = StyleSheet.create({
     width: 26, height: 26, borderRadius: 6,
     justifyContent: 'center', alignItems: 'center',
   },
-  detailLabel: { fontSize: 13, fontWeight: '500' },
-  detailValue: { fontSize: 13, fontWeight: '600', textAlign: 'right', flex: 1 },
+  detailLabel: { fontWeight: '500' },
+  detailValue: { fontWeight: '600', textAlign: 'right', flex: 1 },
 });

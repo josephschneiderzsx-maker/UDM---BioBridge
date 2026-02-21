@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StatusBar, View, StyleSheet } from 'react-native';
+import { StatusBar, View, StyleSheet, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DoorOpen, Plus, History, User } from 'lucide-react-native';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { RootNavigationProvider } from './contexts/RootNavigationContext';
+import useResponsive from './hooks/useResponsive';
 
 import LoginScreen from './screens/LoginScreen';
 import ServerConfigScreen from './screens/ServerConfigScreen';
@@ -82,14 +83,29 @@ function AccountStack() {
 
 function MainTabs() {
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { isSmallPhone, isVerySmallPhone, isTablet, scaleFont, iconSize } = useResponsive();
+
+  // Calculate proper tab bar height based on device and safe area
+  const baseTabBarHeight = isVerySmallPhone ? 50 : isSmallPhone ? 54 : isTablet ? 72 : 58;
+  
+  // Add extra padding for system navigation (gesture or buttons)
+  // This ensures the tab bar content doesn't overlap with system UI
+  const bottomPadding = Platform.OS === 'android' 
+    ? Math.max(insets.bottom, 8) // Android: use inset or minimum padding
+    : insets.bottom; // iOS: use safe area inset
 
   const tabBarStyle = {
     backgroundColor: colors.surface,
     borderTopColor: colors.border,
     borderTopWidth: StyleSheet.hairlineWidth,
-    // No fixed height — let SafeAreaProvider + React Navigation handle
-    // the system navigation bar height automatically (edge-to-edge support)
+    height: baseTabBarHeight + bottomPadding,
+    paddingBottom: bottomPadding,
+    paddingTop: isSmallPhone ? 6 : 8,
   };
+
+  const labelFontSize = scaleFont(isVerySmallPhone ? 10 : 11, false);
+  const tabIconSize = iconSize(isVerySmallPhone ? 20 : isSmallPhone ? 21 : isTablet ? 26 : 22);
 
   return (
     <Tab.Navigator
@@ -99,9 +115,13 @@ function MainTabs() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: labelFontSize,
           fontWeight: '600',
           letterSpacing: 0.1,
+          marginTop: -2,
+        },
+        tabBarIconStyle: {
+          marginBottom: -2,
         },
       }}
     >
@@ -110,7 +130,7 @@ function MainTabs() {
         component={DoorsStack}
         options={{
           title: 'Doors',
-          tabBarIcon: ({ color, size }) => <DoorOpen size={size} color={color} strokeWidth={2} />,
+          tabBarIcon: ({ color }) => <DoorOpen size={tabIconSize} color={color} strokeWidth={2} />,
         }}
       />
       <Tab.Screen
@@ -118,7 +138,7 @@ function MainTabs() {
         component={AddStack}
         options={{
           title: 'Add',
-          tabBarIcon: ({ color, size }) => <Plus size={size} color={color} strokeWidth={2.5} />,
+          tabBarIcon: ({ color }) => <Plus size={tabIconSize} color={color} strokeWidth={2.5} />,
         }}
       />
       <Tab.Screen
@@ -126,7 +146,7 @@ function MainTabs() {
         component={HistoryStack}
         options={{
           title: 'History',
-          tabBarIcon: ({ color, size }) => <History size={size} color={color} strokeWidth={2} />,
+          tabBarIcon: ({ color }) => <History size={tabIconSize} color={color} strokeWidth={2} />,
         }}
       />
       <Tab.Screen
@@ -134,7 +154,7 @@ function MainTabs() {
         component={AccountStack}
         options={{
           title: 'Account',
-          tabBarIcon: ({ color, size }) => <User size={size} color={color} strokeWidth={2} />,
+          tabBarIcon: ({ color }) => <User size={tabIconSize} color={color} strokeWidth={2} />,
         }}
       />
     </Tab.Navigator>
