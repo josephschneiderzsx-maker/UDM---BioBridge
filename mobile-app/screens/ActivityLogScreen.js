@@ -395,9 +395,9 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 40, padding: 4 },
   headerCenter: { flex: 1, alignItems: 'center' },
-  title: { fontSize: 17, fontWeight: '600' },
-  subtitle: { fontSize: 12, marginTop: 1 },
-  content: { paddingBottom: 32 },
+  title: { fontSize: scaleFont(17), fontWeight: '600' },
+  subtitle: { fontSize: scaleFont(12), marginTop: 1 },
+  content: { paddingBottom: spacing(32) },
   emptyContent: { flex: 1, justifyContent: 'center' },
   sectionHeader: {
     paddingHorizontal: 16,
