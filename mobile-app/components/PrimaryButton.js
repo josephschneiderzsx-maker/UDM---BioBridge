@@ -1,6 +1,7 @@
-import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, View } from 'react-native';
+import React, { useRef } from 'react';
+import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, View, Animated } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import useResponsive from '../hooks/useResponsive';
 
 export default function PrimaryButton({
   title,
@@ -13,6 +14,28 @@ export default function PrimaryButton({
   style,
 }) {
   const { colors } = useTheme();
+  const { scaleFont, buttonHeight, spacing, isSmallPhone, isVerySmallPhone } = useResponsive();
+  
+  // Subtle press animation
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.97,
+      tension: 200,
+      friction: 15,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      tension: 200,
+      friction: 10,
+      useNativeDriver: true,
+    }).start();
+  };
 
   const bg =
     variant === 'primary'
@@ -31,35 +54,43 @@ export default function PrimaryButton({
       : '#000000';
 
   const borderStyle =
-    variant === 'outline' ? { borderWidth: 1, borderColor: colors.primary } : {};
+    variant === 'outline' ? { borderWidth: 1.5, borderColor: colors.primary } : {};
 
-  const height = size === 'small' ? 40 : size === 'large' ? 56 : 50;
-  const fontSize = size === 'small' ? 14 : size === 'large' ? 17 : 15;
+  const height = buttonHeight(size);
+  const baseFontSizes = {
+    small: 14,
+    medium: 15,
+    large: 17,
+  };
+  const fontSize = scaleFont(baseFontSizes[size] || baseFontSizes.medium);
 
   const isDisabled = disabled || loading;
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={isDisabled}
-      activeOpacity={0.75}
-      style={[
-        styles.button,
-        { backgroundColor: bg, height },
-        borderStyle,
-        isDisabled && styles.disabled,
-        style,
-      ]}
-    >
-      {loading ? (
-        <ActivityIndicator color={textColor} size="small" />
-      ) : (
-        <View style={styles.content}>
-          {icon && <View style={styles.iconLeft}>{icon}</View>}
-          <Text style={[styles.text, { color: textColor, fontSize }]}>{title}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
+    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={isDisabled}
+        activeOpacity={1}
+        style={[
+          styles.button,
+          { backgroundColor: bg, height },
+          borderStyle,
+          isDisabled && styles.disabled,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator color={textColor} size="small" />
+        ) : (
+          <View style={styles.content}>
+            {icon && <View style={styles.iconLeft}>{icon}</View>}
+            <Text style={[styles.text, { color: textColor, fontSize }]}>{title}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
