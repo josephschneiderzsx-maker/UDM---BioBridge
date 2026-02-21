@@ -213,6 +213,7 @@ function EventDetailModal({ event, colors, onClose }) {
               label="Date & Time"
               value={formatFullDate(ts)}
               colors={colors}
+              scaleFont={scaleFont}
             />
             {event.door_name && (
               <DetailRow
@@ -221,6 +222,7 @@ function EventDetailModal({ event, colors, onClose }) {
                 label="Door"
                 value={event.door_name}
                 colors={colors}
+                scaleFont={scaleFont}
               />
             )}
             {hasUser && (
@@ -230,6 +232,7 @@ function EventDetailModal({ event, colors, onClose }) {
                 label="User"
                 value={event.ingress_user_id}
                 colors={colors}
+                scaleFont={scaleFont}
               />
             )}
             {event.event_data && (
@@ -238,6 +241,7 @@ function EventDetailModal({ event, colors, onClose }) {
                 label="Event Code"
                 value={event.event_data}
                 colors={colors}
+                scaleFont={scaleFont}
               />
             )}
             <DetailRow
@@ -245,6 +249,7 @@ function EventDetailModal({ event, colors, onClose }) {
               label="Source"
               value={source}
               colors={colors}
+              scaleFont={scaleFont}
             />
           </View>
         </View>
