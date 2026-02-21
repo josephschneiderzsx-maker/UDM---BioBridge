@@ -146,6 +146,7 @@ function DetailRow({ IconComp, iconColor, label, value, colors, scaleFont }) {
 
 function EventDetailModal({ event, colors, onClose }) {
   const insets = useSafeAreaInsets();
+  const { scaleFont, spacing } = useResponsive();
   if (!event) return null;
 
   const ts       = event.event_time || event.created_at;
