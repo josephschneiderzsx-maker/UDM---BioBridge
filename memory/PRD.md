@@ -14,73 +14,54 @@ Améliorer l'application mobile React Native Expo pour un design premium et resp
 ## Core Requirements (Static)
 - ✅ Style moderne avec micro-animations et effets premium
 - ✅ Responsivité sur tous les types d'écrans (très petits, petits, normaux, grands, tablettes)
-- ✅ Animations fluides et feedback haptique **uniquement pour actions importantes**
+- ✅ Animations fluides et feedback haptique **uniquement pour actions importantes (unlock door)**
 - ✅ Accessibilité (tailles de police adaptatives)
 - ✅ Conserver le bleu URZIS #00AAFF
-- ✅ Mode sombre/clair avec transition animée
+- ✅ Mode sombre/clair avec persistance
 - ✅ Skeleton loaders premium pendant le chargement
-- ✅ Pull-to-refresh personnalisé
-- ✅ Widget Quick Unlock iOS/Android avec biométrie
+- ✅ Pull-to-refresh natif
+- ✅ Tab bar responsive qui respecte les gestures de navigation système
 
 ## What's Been Implemented
 
-### Session 1 - Feb 2026: Premium UI Base
-- Hook `useResponsive` avec breakpoints adaptatifs
-- Composants premium (SkeletonLoader, AnimatedThemeSwitch, HapticButton)
-- ThemeContext avec transitions animées
-- Écrans mis à jour avec responsivité
+### Session 4 - Jan 2026: Premium UI Improvements
+**Problèmes résolus:**
+1. Vibrations inutiles désactivées (conservées uniquement pour unlock door)
+2. Tab bar responsive qui ne chevauche pas la navigation système
+3. Composants avec micro-animations subtiles
+4. Tous les écrans principaux responsive
 
-### Session 2 - Feb 2026: Low-End Device Optimization + Widget
-**Problème résolu:** UI mal rendue sur Motorola G 2021
-- Ajout `isLowEndDevice` detection
-- Widget Quick Unlock avec biométrie
+**Changements:**
+- **App.js**: Tab bar calcule dynamiquement sa hauteur selon safe area insets et type d'appareil
+- **DoorCard.js**: Animation scale subtile au press, tailles responsive
+- **Input.js**: Animation de bordure au focus, tailles responsive
+- **PrimaryButton.js**: Animation scale subtile au press, tailles responsive
+- **StatusBadge.js**: Tailles de police responsive
+- **SkeletonLoader.js**: Dimensions responsive
+- **LoginScreen.js**: Animation d'entrée fade + slide, tailles responsive
+- **DoorListScreen.js**: Espacements et tailles responsive, tab bar padding
+- **DoorControlScreen.js**: Bouton unlock responsive, marges bottom safe area
+- **AccountScreen.js**: Tous les éléments responsive avec tab bar padding
+- **ActivityLogScreen.js**: Vibration supprimée du modal close
 
-### Session 3 - Feb 2026: Adaptation Automatique Densité/Police
-**Problème résolu:** L'app ne s'adaptait pas aux paramètres système (densité pixel, taille police)
+## Files Modified
 
-**Nouvelles détections automatiques:**
-- `pixelDensity` - Densité de l'écran via `PixelRatio.get()`
-- `systemFontScale` - Taille de police système via `PixelRatio.getFontScale()`
-- `hasLargeFontScale` - Détection grande police (> 1.15)
-- `hasHighDensity` - Détection haute densité (>= 3)
-- `isCompactMode` - Combinaison petit écran + grande police
-- `effectiveWidth` - Largeur ajustée pour haute densité
-
-**Nouvelles fonctions:**
-- `floatingMargin()` - Marges adaptatives pour headers/tab bar
-- `cappedFontScale` - Limite le scaling de police pour éviter les débordements
-
-**Comportement:**
-| Condition | Font Scale Cap | Spacing Factor | Floating Margin |
-|-----------|---------------|----------------|-----------------|
-| Compact Mode | 1.1 | 0.7 | 8px |
-| Small Phone | 1.3 | 0.8 | 12px |
-| Normal | 1.3 | 1.0 | 16px |
-| Tablet | 1.3 | 1.2 | 24px |
-
-## Files Modified/Created
-
-### Session 2 Updates:
+### Session 4 Updates:
 ```
 /app/mobile-app/
-├── hooks/
-│   └── useResponsive.js (UPDATED - isLowEndDevice, tabBarPadding)
+├── App.js (UPDATED - responsive tab bar with safe area)
 ├── components/
-│   ├── DoorCard.js (UPDATED - haptic disabled on tap)
-│   ├── HapticButton.js (UPDATED - haptic disabled)
-│   ├── AnimatedThemeSwitch.js (UPDATED - haptic disabled)
-│   └── PrimaryButton.js (UPDATED - haptic disabled)
-├── services/
-│   └── WidgetService.js (NEW)
+│   ├── DoorCard.js (UPDATED - scale animation, responsive)
+│   ├── Input.js (UPDATED - border animation, responsive)
+│   ├── PrimaryButton.js (UPDATED - scale animation, responsive)
+│   ├── StatusBadge.js (UPDATED - responsive)
+│   └── SkeletonLoader.js (UPDATED - responsive)
 ├── screens/
-│   ├── DoorControlScreen.js (UPDATED - ACTIONS_BOTTOM_MARGIN)
-│   ├── DoorListScreen.js (UPDATED - tabBarPadding)
-│   ├── ActivityLogScreen.js (UPDATED - tabBarPadding)
-│   ├── AccountScreen.js (UPDATED - Widget Settings menu)
-│   └── WidgetSettingsScreen.js (NEW)
-├── widgets/
-│   └── README.md (NEW)
-└── App.js (UPDATED - low-end tab bar, WidgetSettings route)
+│   ├── LoginScreen.js (UPDATED - entrance animation, responsive)
+│   ├── DoorListScreen.js (UPDATED - responsive)
+│   ├── DoorControlScreen.js (UPDATED - responsive unlock button)
+│   ├── AccountScreen.js (UPDATED - responsive)
+│   └── ActivityLogScreen.js (UPDATED - removed vibration)
 ```
 
 ## Tech Stack
@@ -88,36 +69,39 @@ Améliorer l'application mobile React Native Expo pour un design premium et resp
 - Expo SDK 54
 - expo-blur, expo-haptics, expo-linear-gradient, expo-local-authentication
 - lucide-react-native
+- react-native-safe-area-context
 
 ## Device Support Matrix
-| Device Type | Screen Width | Tab Bar | Icons | Font Scale |
-|-------------|-------------|---------|-------|------------|
-| Very Small  | < 320px     | 52px    | 18px  | 0.85       |
-| Small (Moto G) | 320-360px | 52px    | 18px  | 0.9        |
-| Phone       | 360-414px   | 56px    | 20px  | 1.0        |
-| Large Phone | 414-768px   | 64px    | 22px  | 1.0        |
-| Tablet      | 768px+      | 72px    | 26px  | 1.1        |
+| Device Type | Screen Width | Tab Bar Height | Base Font Scale |
+|-------------|-------------|----------------|-----------------|
+| Very Small  | < 320px     | 50px + insets  | 0.85            |
+| Small (Moto G) | 320-360px | 54px + insets | 0.9             |
+| Phone       | 360-414px   | 58px + insets  | 1.0             |
+| Large Phone | 414-768px   | 58px + insets  | 1.0             |
+| Tablet      | 768px+      | 72px + insets  | 1.1             |
+
+## Navigation System Support
+- Android gesture navigation: Uses `useSafeAreaInsets()` for bottom padding
+- Android 3-button navigation: Uses minimum 8px padding
+- iOS home indicator: Uses safe area insets automatically
 
 ## Prioritized Backlog
 
 ### P0 - Completed ✅
-- Responsive hook avec low-end detection
-- Fix chevauchement tab bar / actions
-- Désactivation vibrations excessives
-- Widget service et écran de config
+- Responsive hook avec détection device type
+- Tab bar responsive avec safe area
+- Vibrations désactivées (sauf unlock door)
+- Micro-animations subtiles sur tous les composants interactifs
 
-### P1 - Pour activation Widget
-- [ ] Upgrade vers Expo SDK 55 (pour expo-widget iOS)
-- [ ] Code natif Android pour widget
-- [ ] Tester widget sur appareils physiques
+### P1 - À faire
+- [ ] Test sur appareils physiques (Motorola G 2021, tablettes)
+- [ ] Mode automatique thème (détection système)
 
 ### P2 - Nice to Have
-- [ ] Widget Live Activities iOS (Dynamic Island)
+- [ ] Widget Quick Unlock iOS/Android
 - [ ] Animations Lottie pour splash
 - [ ] Mode offline avec sync
 
 ## Testing Status
-- ✅ 100% validation tous composants
-- ✅ Low-end device optimizations validées
-- ✅ Widget service et navigation validés
-- ⚠️ Test physique requis sur Motorola G 2021
+- ✅ Tous les composants compilent sans erreur
+- ⚠️ Test physique requis sur différents appareils
